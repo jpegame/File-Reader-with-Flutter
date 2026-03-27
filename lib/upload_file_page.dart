@@ -52,20 +52,14 @@ class _UploadFilePageState extends State<UploadFilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Upload File")),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(
-              onPressed: pickFile,
-              child: const Text("Select PDF"),
-            ),
-            const SizedBox(height: 20),
-            Text(file != null ? "Selected: ${file?.name}" : "No file selected"),
-          ],
-        ),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton(onPressed: pickFile, child: const Text("Select PDF")),
+          const SizedBox(height: 20),
+          Text(file != null ? "Selected: ${file?.name}" : "No file selected"),
+        ],
       ),
     );
   }
