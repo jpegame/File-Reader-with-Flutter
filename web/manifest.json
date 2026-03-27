@@ -1,6 +1,6 @@
 {
-    "name": "app",
-    "short_name": "app",
+    "name": "study_testing",
+    "short_name": "study_testing",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

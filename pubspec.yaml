@@ -1,14 +1,21 @@
-name: app
+name: study_testing
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.1.0
 
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.10.0-290.4.beta
 
 dependencies:
   flutter:
     sdk: flutter
+  file_picker: ^8.0.0
+  web: ^1.0.0
+  image_picker: ^1.0.7
+  pdfx: ^2.6.0
+  syncfusion_flutter_pdf: ^33.1.44
+  syncfusion_flutter_pdfviewer: ^33.1.44
+  shared_preferences: ^2.5.4
 
 dev_dependencies:
   flutter_test:
