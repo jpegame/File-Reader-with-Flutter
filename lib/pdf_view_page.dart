@@ -23,6 +23,7 @@ class _PdfPageState extends State<PdfPage> {
 
   int currentPage = 1;
   int totalPages = 0;
+  bool _showSearchBar = false;
 
   @override
   void initState() {
@@ -79,47 +80,54 @@ class _PdfPageState extends State<PdfPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("PDF Viewer"),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: "Search...",
-                      fillColor: Colors.white,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+        bottom: _showSearchBar
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(60),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: "Search...",
+                            fillColor: Colors.white,
+                            filled: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onChanged: _onSearchChanged,
+                        ),
                       ),
-                    ),
-                    onChanged: _onSearchChanged,
+
+                      const SizedBox(width: 8),
+
+                      IconButton(
+                        icon: const Icon(Icons.arrow_upward),
+                        onPressed: _prevMatch,
+                      ),
+
+                      IconButton(
+                        icon: const Icon(Icons.arrow_downward),
+                        onPressed: _nextMatch,
+                      ),
+
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _clearSearch();
+                          setState(() {
+                            _showSearchBar = false;
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ),
-
-                const SizedBox(width: 8),
-
-                IconButton(
-                  icon: const Icon(Icons.arrow_upward),
-                  onPressed: _prevMatch,
-                ),
-
-                IconButton(
-                  icon: const Icon(Icons.arrow_downward),
-                  onPressed: _nextMatch,
-                ),
-
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: _clearSearch,
-                ),
-              ],
-            ),
-          ),
-        ),
+              )
+            : null,
       ),
 
       body: Stack(
@@ -150,13 +158,17 @@ class _PdfPageState extends State<PdfPage> {
             child: FloatingHorizontalMenu(
               children: [
                 FloatingActionButton(
+                  heroTag: "search_fab",
                   mini: true,
                   onPressed: () {
-                    print("Feature 1");
+                    setState(() {
+                      _showSearchBar = true;
+                    });
                   },
                   child: Icon(Icons.search),
                 ),
                 FloatingActionButton(
+                  heroTag: "settings_fab",
                   mini: true,
                   onPressed: () {
                     print("Feature 2");
