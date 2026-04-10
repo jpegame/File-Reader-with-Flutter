@@ -9,19 +9,19 @@ void main() {
   runApp(const MainApp());
 }
 
-const MaterialColor deepSea = MaterialColor(
-  0xFF0ABF91, // base (500)
+const MaterialColor appColorTheme = MaterialColor(
+  0xFF3FA851, // base (500)
   <int, Color>{
-    50: Color(0xFFEBFEF7),
-    100: Color(0xFFD0FBE8),
-    200: Color(0xFFA4F6D7),
-    300: Color(0xFF6AEBC2),
-    400: Color(0xFF2FD8A8),
-    500: Color(0xFF0ABF91), // 👈 principal
-    600: Color(0xFF009B77),
-    700: Color(0xFF008368),
-    800: Color(0xFF03624F),
-    900: Color(0xFF045042),
+    50: Color(0xFFF2FBF3),
+    100: Color(0xFFE2F6E5),
+    200: Color(0xFFC6ECCC),
+    300: Color(0xFF98DDA4),
+    400: Color(0xFF64C475),
+    500: Color(0xFF3FA851), // principal
+    600: Color(0xFF349A46),
+    700: Color(0xFF286D35),
+    800: Color(0xFF24572E),
+    900: Color(0xFF1F4827),
   },
 );
 
@@ -46,55 +46,86 @@ class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "Aplicativo de teste",
+      title: "File Reader",
       themeMode: _themeMode,
       debugShowCheckedModeBanner: false,
 
       theme: ThemeData(
         brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0ABF91)),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF008368),
+        scaffoldBackgroundColor: Colors.white,
+        colorScheme: ColorScheme.fromSeed(seedColor: appColorTheme[500]!),
+        appBarTheme: AppBarTheme(
+          backgroundColor: appColorTheme[600]!,
           foregroundColor: Colors.white,
         ),
+        cardTheme: CardThemeData(
+          color: appColorTheme[100],
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
       ),
-
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSwatch(
-          primarySwatch: deepSea,
+        scaffoldBackgroundColor: const Color(0xFF0F1A14),
+
+        colorScheme: ColorScheme(
           brightness: Brightness.dark,
-        ).copyWith(primary: deepSea[300], secondary: deepSea[200]),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black,
+
+          primary: appColorTheme[400]!,
+          onPrimary: Colors.black,
+
+          secondary: appColorTheme[300]!,
+          onSecondary: Colors.black,
+
+          surface: const Color(0xFF16241C),
+          onSurface: Colors.white,
+
+          error: Colors.redAccent,
+          onError: Colors.white,
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: appColorTheme[700],
           foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: appColorTheme[900],
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: deepSea[700],
+            backgroundColor: appColorTheme[500],
             foregroundColor: Colors.white,
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.grey[850], // Fundo do input (tchau, branco!)
+          fillColor: const Color(0xFF1B2B22),
+
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: deepSea[300]!),
+            borderSide: BorderSide(color: appColorTheme[400]!),
           ),
+
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey[700]!),
+            borderSide: BorderSide(color: const Color(0xFF2A3D33)),
           ),
+
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: deepSea[400]!, width: 2),
+            borderSide: BorderSide(color: appColorTheme[300]!, width: 2),
           ),
-          labelStyle: TextStyle(color: deepSea[100]),
+
+          labelStyle: TextStyle(color: appColorTheme[200]),
           hintStyle: TextStyle(color: Colors.grey[500]),
         ),
       ),
-
       home: MainAppPage(onToggleTheme: _toggleTheme),
     );
   }
@@ -125,10 +156,7 @@ class _MainAppPageState extends State<MainAppPage> {
       ),
     ];
     return Scaffold(
-      appBar: Header(
-        title: "Aplicativo teste",
-        onToggleTheme: widget.onToggleTheme,
-      ),
+      appBar: Header(title: "File Reader", onToggleTheme: widget.onToggleTheme),
       body: pages[_currentIndex],
       bottomNavigationBar: Footer(
         currentIndex: _currentIndex,

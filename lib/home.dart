@@ -62,14 +62,14 @@ class _HomePageState extends State<HomePage> {
                     Container(
                       decoration: const BoxDecoration(
                         borderRadius: BorderRadius.all(Radius.circular(16.0)),
-                        color: Colors.white70,
+                        color: Colors.white,
                       ),
                       margin: const EdgeInsets.symmetric(
                         horizontal: 8,
                         vertical: 8,
                       ),
                       child: Image.network(
-                        product['images'][0],
+                        "https://placehold.co/200x200/FFF/31343C.png",
                         width: double.infinity,
                         height: 150,
                         fit: BoxFit.contain,
