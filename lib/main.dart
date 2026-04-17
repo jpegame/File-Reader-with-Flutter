@@ -4,6 +4,7 @@ import 'components/footer.dart';
 import 'home.dart';
 import 'upload_file_page.dart';
 import 'config_page.dart';
+import 'database/app_database.dart';
 
 void main() {
   runApp(const MainApp());
@@ -142,6 +143,13 @@ class MainAppPage extends StatefulWidget {
 
 class _MainAppPageState extends State<MainAppPage> {
   int _currentIndex = 0;
+  final database = AppDatabase();
+
+  Null showCategoriesOnTerminal() {
+    // categories = await database.into(database.users).insert(
+    //   UsersCompanion.insert(name: 'Gemini'),
+    // );
+  }
 
   @override
   Widget build(BuildContext context) {
