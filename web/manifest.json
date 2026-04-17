@@ -1,6 +1,6 @@
 {
-    "name": "study_testing",
-    "short_name": "study_testing",
+    "name": "file_reader_app",
+    "short_name": "file_reader_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

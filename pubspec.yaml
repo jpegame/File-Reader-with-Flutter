@@ -1,4 +1,4 @@
-name: study_testing
+name: file_reader_app
 description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0
@@ -17,6 +17,9 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^33.1.44
   shared_preferences: ^2.5.4
   http: ^1.6.0
+  drift: ^2.32.1
+  path_provider: ^2.1.5
+  build_runner: ^2.13.1
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,4 @@
-package com.example.study_testing
+package com.example.file_reader_app
 
 import io.flutter.embedding.android.FlutterActivity
 
