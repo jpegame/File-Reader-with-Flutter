@@ -11,14 +11,14 @@ void main() {
 }
 
 const MaterialColor appColorTheme = MaterialColor(
-  0xFF3FA851, // base (500)
+  0xFF3FA851,
   <int, Color>{
     50: Color(0xFFF2FBF3),
     100: Color(0xFFE2F6E5),
     200: Color(0xFFC6ECCC),
     300: Color(0xFF98DDA4),
     400: Color(0xFF64C475),
-    500: Color(0xFF3FA851), // principal
+    500: Color(0xFF3FA851),
     600: Color(0xFF349A46),
     700: Color(0xFF286D35),
     800: Color(0xFF24572E),
@@ -35,6 +35,21 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   ThemeMode _themeMode = ThemeMode.light;
+  
+  // Initialize database once at the top level
+  late final AppDatabase _database;
+
+  @override
+  void initState() {
+    super.initState();
+    _database = AppDatabase();
+  }
+
+  @override
+  void dispose() {
+    _database.close(); // Clean up the connection when app closes
+    super.dispose();
+  }
 
   void _toggleTheme() {
     setState(() {
@@ -50,7 +65,6 @@ class _MainAppState extends State<MainApp> {
       title: "File Reader",
       themeMode: _themeMode,
       debugShowCheckedModeBanner: false,
-
       theme: ThemeData(
         brightness: Brightness.light,
         scaffoldBackgroundColor: Colors.white,
@@ -70,19 +84,14 @@ class _MainAppState extends State<MainApp> {
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF0F1A14),
-
         colorScheme: ColorScheme(
           brightness: Brightness.dark,
-
           primary: appColorTheme[400]!,
           onPrimary: Colors.black,
-
           secondary: appColorTheme[300]!,
           onSecondary: Colors.black,
-
           surface: const Color(0xFF16241C),
           onSurface: Colors.white,
-
           error: Colors.redAccent,
           onError: Colors.white,
         ),
@@ -107,35 +116,40 @@ class _MainAppState extends State<MainApp> {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: const Color(0xFF1B2B22),
-
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: appColorTheme[400]!),
           ),
-
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: const Color(0xFF2A3D33)),
           ),
-
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: appColorTheme[300]!, width: 2),
           ),
-
           labelStyle: TextStyle(color: appColorTheme[200]),
           hintStyle: TextStyle(color: Colors.grey[500]),
         ),
       ),
-      home: MainAppPage(onToggleTheme: _toggleTheme),
+      // Pass the database instance down
+      home: MainAppPage(
+        onToggleTheme: _toggleTheme, 
+        database: _database
+      ),
     );
   }
 }
 
 class MainAppPage extends StatefulWidget {
   final VoidCallback onToggleTheme;
+  final AppDatabase database;
 
-  const MainAppPage({super.key, required this.onToggleTheme});
+  const MainAppPage({
+    super.key, 
+    required this.onToggleTheme, 
+    required this.database
+  });
 
   @override
   State<MainAppPage> createState() => _MainAppPageState();
@@ -143,13 +157,6 @@ class MainAppPage extends StatefulWidget {
 
 class _MainAppPageState extends State<MainAppPage> {
   int _currentIndex = 0;
-  final database = AppDatabase();
-
-  Null showCategoriesOnTerminal() {
-    // categories = await database.into(database.users).insert(
-    //   UsersCompanion.insert(name: 'Gemini'),
-    // );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,8 +168,10 @@ class _MainAppPageState extends State<MainAppPage> {
       ConfigPage(
         isDarkMode: isDarkMode,
         onThemeChanged: (_) => widget.onToggleTheme(),
+        db: widget.database, // Use database passed from parent
       ),
     ];
+
     return Scaffold(
       appBar: Header(title: "File Reader", onToggleTheme: widget.onToggleTheme),
       body: pages[_currentIndex],
