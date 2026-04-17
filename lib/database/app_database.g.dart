@@ -1489,6 +1489,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DocumentTable document = $DocumentTable(this);
   late final $MarkupTable markup = $MarkupTable(this);
   late final $NotationTable notation = $NotationTable(this);
+  late final CategoryDao categoryDao = CategoryDao(this as AppDatabase);
+  late final ConfigDao configDao = ConfigDao(this as AppDatabase);
+  late final DocumentDao documentDao = DocumentDao(this as AppDatabase);
+  late final MarkupDao markupDao = MarkupDao(this as AppDatabase);
+  late final NotationDao notationDao = NotationDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
