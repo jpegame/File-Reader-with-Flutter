@@ -32,10 +32,7 @@ class ConfigPage extends StatelessWidget {
                 Switch(
                   value: isDarkMode,
                   onChanged: (value) async {
-                    // 1. Update the database via the DAO
                     await db.configDao.upsertConfig('dark_mode', value.toString());
-                    
-                    // 2. Notify the app to change the UI theme
                     onThemeChanged(value);
                   },
                 ),

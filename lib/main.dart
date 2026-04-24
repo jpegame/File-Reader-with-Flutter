@@ -35,14 +35,28 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   ThemeMode _themeMode = ThemeMode.light;
-  
-  // Initialize database once at the top level
   late final AppDatabase _database;
+
+  Future<void> _loadThemeSettings() async {
+    try {
+      final themeConfig = await _database.configDao.getValue('dark_mode');
+      if (themeConfig != null) {
+        setState(() {
+          _themeMode = themeConfig == 'true' 
+              ? ThemeMode.dark 
+              : ThemeMode.light;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading theme: $e");
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _database = AppDatabase();
+    _loadThemeSettings();
   }
 
   @override
@@ -173,7 +187,7 @@ class _MainAppPageState extends State<MainAppPage> {
     ];
 
     return Scaffold(
-      appBar: Header(title: "File Reader", onToggleTheme: widget.onToggleTheme),
+      appBar: Header(title: "File Reader"),
       body: pages[_currentIndex],
       bottomNavigationBar: Footer(
         currentIndex: _currentIndex,
