@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../database/app_database.dart'; // Adjust path to your db file
+import '../database/app_database.dart';
 
 class ConfigPage extends StatelessWidget {
   final AppDatabase db;
@@ -21,7 +21,6 @@ class ConfigPage extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Theme Setting Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -40,8 +39,6 @@ class ConfigPage extends StatelessWidget {
             ),
             
             const Divider(height: 40),
-
-            // Example: Display current DB path or status
             ListTile(
               leading: const Icon(Icons.storage),
               title: const Text("Banco de dados SQLite"),
@@ -67,9 +64,6 @@ class ConfigPage extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
           TextButton(
             onPressed: () async {
-              // Drift clean up (requires custom query or deleting all tables)
-              // For a simple test, we can just delete the categories 
-              // which cascades to documents because of your foreign keys
               final categories = await db.categoryDao.watchCategories().first;
               for (var cat in categories) {
                 await db.categoryDao.deleteCategory(cat.id);

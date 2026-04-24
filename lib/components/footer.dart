@@ -28,6 +28,10 @@ class Footer extends StatelessWidget {
           icon: Icon(Icons.settings),
           label: "Configurações",
         ),
+        NavigationDestination(
+          icon: Icon(Icons.warning),
+          label: "DEBUG PDF",
+        ),
       ],
     );
   }

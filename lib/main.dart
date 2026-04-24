@@ -4,6 +4,7 @@ import 'components/footer.dart';
 import 'home.dart';
 import 'upload_file_page.dart';
 import 'config_page.dart';
+import 'insert_page.dart';
 import 'database/app_database.dart';
 
 void main() {
@@ -61,7 +62,7 @@ class _MainAppState extends State<MainApp> {
 
   @override
   void dispose() {
-    _database.close(); // Clean up the connection when app closes
+    _database.close();
     super.dispose();
   }
 
@@ -146,7 +147,6 @@ class _MainAppState extends State<MainApp> {
           hintStyle: TextStyle(color: Colors.grey[500]),
         ),
       ),
-      // Pass the database instance down
       home: MainAppPage(
         onToggleTheme: _toggleTheme, 
         database: _database
@@ -177,13 +177,14 @@ class _MainAppPageState extends State<MainAppPage> {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final List<Widget> pages = [
-      const HomePage(),
-      const UploadFilePage(),
+      HomePage(db: widget.database),
+      InsertPage(db: widget.database),
       ConfigPage(
         isDarkMode: isDarkMode,
         onThemeChanged: (_) => widget.onToggleTheme(),
-        db: widget.database, // Use database passed from parent
+        db: widget.database,
       ),
+      const UploadFilePage(),
     ];
 
     return Scaffold(

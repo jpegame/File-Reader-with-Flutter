@@ -39,7 +39,6 @@ class _UploadFilePageState extends State<UploadFilePage> {
       });
     }
 
-    // Navigate only if the widget is still mounted
     if (!mounted) return;
 
     if (fileBytes != null) {
