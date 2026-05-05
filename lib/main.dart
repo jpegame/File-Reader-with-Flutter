@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'components/header.dart';
 import 'components/footer.dart';
 import 'home.dart';
-import 'upload_file_page.dart';
 import 'config_page.dart';
 import 'insert_page.dart';
 import 'database/app_database.dart';
@@ -184,7 +183,6 @@ class _MainAppPageState extends State<MainAppPage> {
         onThemeChanged: (_) => widget.onToggleTheme(),
         db: widget.database,
       ),
-      const UploadFilePage(),
     ];
 
     return Scaffold(
