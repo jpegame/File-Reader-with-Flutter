@@ -456,6 +456,28 @@ class $DocumentTable extends Document
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _filePathMeta = const VerificationMeta(
+    'filePath',
+  );
+  @override
+  late final GeneratedColumn<String> filePath = GeneratedColumn<String>(
+    'file_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fileDataMeta = const VerificationMeta(
+    'fileData',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> fileData = GeneratedColumn<Uint8List>(
+    'file_data',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _lastAccessMeta = const VerificationMeta(
     'lastAccess',
   );
@@ -496,6 +518,8 @@ class $DocumentTable extends Document
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    filePath,
+    fileData,
     lastAccess,
     lastPage,
     categoryId,
@@ -522,6 +546,18 @@ class $DocumentTable extends Document
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('file_path')) {
+      context.handle(
+        _filePathMeta,
+        filePath.isAcceptableOrUnknown(data['file_path']!, _filePathMeta),
+      );
+    }
+    if (data.containsKey('file_data')) {
+      context.handle(
+        _fileDataMeta,
+        fileData.isAcceptableOrUnknown(data['file_data']!, _fileDataMeta),
+      );
     }
     if (data.containsKey('last_access')) {
       context.handle(
@@ -564,6 +600,14 @@ class $DocumentTable extends Document
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      filePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_path'],
+      ),
+      fileData: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}file_data'],
+      ),
       lastAccess: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_access'],
@@ -588,12 +632,16 @@ class $DocumentTable extends Document
 class DocumentData extends DataClass implements Insertable<DocumentData> {
   final int id;
   final String name;
+  final String? filePath;
+  final Uint8List? fileData;
   final DateTime lastAccess;
   final int lastPage;
   final int categoryId;
   const DocumentData({
     required this.id,
     required this.name,
+    this.filePath,
+    this.fileData,
     required this.lastAccess,
     required this.lastPage,
     required this.categoryId,
@@ -603,6 +651,12 @@ class DocumentData extends DataClass implements Insertable<DocumentData> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || filePath != null) {
+      map['file_path'] = Variable<String>(filePath);
+    }
+    if (!nullToAbsent || fileData != null) {
+      map['file_data'] = Variable<Uint8List>(fileData);
+    }
     map['last_access'] = Variable<DateTime>(lastAccess);
     map['last_page'] = Variable<int>(lastPage);
     map['category_id'] = Variable<int>(categoryId);
@@ -613,6 +667,12 @@ class DocumentData extends DataClass implements Insertable<DocumentData> {
     return DocumentCompanion(
       id: Value(id),
       name: Value(name),
+      filePath: filePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(filePath),
+      fileData: fileData == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fileData),
       lastAccess: Value(lastAccess),
       lastPage: Value(lastPage),
       categoryId: Value(categoryId),
@@ -627,6 +687,8 @@ class DocumentData extends DataClass implements Insertable<DocumentData> {
     return DocumentData(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      filePath: serializer.fromJson<String?>(json['filePath']),
+      fileData: serializer.fromJson<Uint8List?>(json['fileData']),
       lastAccess: serializer.fromJson<DateTime>(json['lastAccess']),
       lastPage: serializer.fromJson<int>(json['lastPage']),
       categoryId: serializer.fromJson<int>(json['categoryId']),
@@ -638,6 +700,8 @@ class DocumentData extends DataClass implements Insertable<DocumentData> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
+      'filePath': serializer.toJson<String?>(filePath),
+      'fileData': serializer.toJson<Uint8List?>(fileData),
       'lastAccess': serializer.toJson<DateTime>(lastAccess),
       'lastPage': serializer.toJson<int>(lastPage),
       'categoryId': serializer.toJson<int>(categoryId),
@@ -647,12 +711,16 @@ class DocumentData extends DataClass implements Insertable<DocumentData> {
   DocumentData copyWith({
     int? id,
     String? name,
+    Value<String?> filePath = const Value.absent(),
+    Value<Uint8List?> fileData = const Value.absent(),
     DateTime? lastAccess,
     int? lastPage,
     int? categoryId,
   }) => DocumentData(
     id: id ?? this.id,
     name: name ?? this.name,
+    filePath: filePath.present ? filePath.value : this.filePath,
+    fileData: fileData.present ? fileData.value : this.fileData,
     lastAccess: lastAccess ?? this.lastAccess,
     lastPage: lastPage ?? this.lastPage,
     categoryId: categoryId ?? this.categoryId,
@@ -661,6 +729,8 @@ class DocumentData extends DataClass implements Insertable<DocumentData> {
     return DocumentData(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      filePath: data.filePath.present ? data.filePath.value : this.filePath,
+      fileData: data.fileData.present ? data.fileData.value : this.fileData,
       lastAccess: data.lastAccess.present
           ? data.lastAccess.value
           : this.lastAccess,
@@ -676,6 +746,8 @@ class DocumentData extends DataClass implements Insertable<DocumentData> {
     return (StringBuffer('DocumentData(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('filePath: $filePath, ')
+          ..write('fileData: $fileData, ')
           ..write('lastAccess: $lastAccess, ')
           ..write('lastPage: $lastPage, ')
           ..write('categoryId: $categoryId')
@@ -684,13 +756,23 @@ class DocumentData extends DataClass implements Insertable<DocumentData> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, lastAccess, lastPage, categoryId);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    filePath,
+    $driftBlobEquality.hash(fileData),
+    lastAccess,
+    lastPage,
+    categoryId,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is DocumentData &&
           other.id == this.id &&
           other.name == this.name &&
+          other.filePath == this.filePath &&
+          $driftBlobEquality.equals(other.fileData, this.fileData) &&
           other.lastAccess == this.lastAccess &&
           other.lastPage == this.lastPage &&
           other.categoryId == this.categoryId);
@@ -699,12 +781,16 @@ class DocumentData extends DataClass implements Insertable<DocumentData> {
 class DocumentCompanion extends UpdateCompanion<DocumentData> {
   final Value<int> id;
   final Value<String> name;
+  final Value<String?> filePath;
+  final Value<Uint8List?> fileData;
   final Value<DateTime> lastAccess;
   final Value<int> lastPage;
   final Value<int> categoryId;
   const DocumentCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.filePath = const Value.absent(),
+    this.fileData = const Value.absent(),
     this.lastAccess = const Value.absent(),
     this.lastPage = const Value.absent(),
     this.categoryId = const Value.absent(),
@@ -712,6 +798,8 @@ class DocumentCompanion extends UpdateCompanion<DocumentData> {
   DocumentCompanion.insert({
     this.id = const Value.absent(),
     required String name,
+    this.filePath = const Value.absent(),
+    this.fileData = const Value.absent(),
     required DateTime lastAccess,
     required int lastPage,
     required int categoryId,
@@ -722,6 +810,8 @@ class DocumentCompanion extends UpdateCompanion<DocumentData> {
   static Insertable<DocumentData> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<String>? filePath,
+    Expression<Uint8List>? fileData,
     Expression<DateTime>? lastAccess,
     Expression<int>? lastPage,
     Expression<int>? categoryId,
@@ -729,6 +819,8 @@ class DocumentCompanion extends UpdateCompanion<DocumentData> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (filePath != null) 'file_path': filePath,
+      if (fileData != null) 'file_data': fileData,
       if (lastAccess != null) 'last_access': lastAccess,
       if (lastPage != null) 'last_page': lastPage,
       if (categoryId != null) 'category_id': categoryId,
@@ -738,6 +830,8 @@ class DocumentCompanion extends UpdateCompanion<DocumentData> {
   DocumentCompanion copyWith({
     Value<int>? id,
     Value<String>? name,
+    Value<String?>? filePath,
+    Value<Uint8List?>? fileData,
     Value<DateTime>? lastAccess,
     Value<int>? lastPage,
     Value<int>? categoryId,
@@ -745,6 +839,8 @@ class DocumentCompanion extends UpdateCompanion<DocumentData> {
     return DocumentCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      filePath: filePath ?? this.filePath,
+      fileData: fileData ?? this.fileData,
       lastAccess: lastAccess ?? this.lastAccess,
       lastPage: lastPage ?? this.lastPage,
       categoryId: categoryId ?? this.categoryId,
@@ -759,6 +855,12 @@ class DocumentCompanion extends UpdateCompanion<DocumentData> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (filePath.present) {
+      map['file_path'] = Variable<String>(filePath.value);
+    }
+    if (fileData.present) {
+      map['file_data'] = Variable<Uint8List>(fileData.value);
     }
     if (lastAccess.present) {
       map['last_access'] = Variable<DateTime>(lastAccess.value);
@@ -777,6 +879,8 @@ class DocumentCompanion extends UpdateCompanion<DocumentData> {
     return (StringBuffer('DocumentCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('filePath: $filePath, ')
+          ..write('fileData: $fileData, ')
           ..write('lastAccess: $lastAccess, ')
           ..write('lastPage: $lastPage, ')
           ..write('categoryId: $categoryId')
@@ -1873,6 +1977,8 @@ typedef $$DocumentTableCreateCompanionBuilder =
     DocumentCompanion Function({
       Value<int> id,
       required String name,
+      Value<String?> filePath,
+      Value<Uint8List?> fileData,
       required DateTime lastAccess,
       required int lastPage,
       required int categoryId,
@@ -1881,6 +1987,8 @@ typedef $$DocumentTableUpdateCompanionBuilder =
     DocumentCompanion Function({
       Value<int> id,
       Value<String> name,
+      Value<String?> filePath,
+      Value<Uint8List?> fileData,
       Value<DateTime> lastAccess,
       Value<int> lastPage,
       Value<int> categoryId,
@@ -1963,6 +2071,16 @@ class $$DocumentTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get fileData => $composableBuilder(
+    column: $table.fileData,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2069,6 +2187,16 @@ class $$DocumentTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get fileData => $composableBuilder(
+    column: $table.fileData,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get lastAccess => $composableBuilder(
     column: $table.lastAccess,
     builder: (column) => ColumnOrderings(column),
@@ -2117,6 +2245,12 @@ class $$DocumentTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get filePath =>
+      $composableBuilder(column: $table.filePath, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get fileData =>
+      $composableBuilder(column: $table.fileData, builder: (column) => column);
 
   GeneratedColumn<DateTime> get lastAccess => $composableBuilder(
     column: $table.lastAccess,
@@ -2234,12 +2368,16 @@ class $$DocumentTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> filePath = const Value.absent(),
+                Value<Uint8List?> fileData = const Value.absent(),
                 Value<DateTime> lastAccess = const Value.absent(),
                 Value<int> lastPage = const Value.absent(),
                 Value<int> categoryId = const Value.absent(),
               }) => DocumentCompanion(
                 id: id,
                 name: name,
+                filePath: filePath,
+                fileData: fileData,
                 lastAccess: lastAccess,
                 lastPage: lastPage,
                 categoryId: categoryId,
@@ -2248,12 +2386,16 @@ class $$DocumentTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String name,
+                Value<String?> filePath = const Value.absent(),
+                Value<Uint8List?> fileData = const Value.absent(),
                 required DateTime lastAccess,
                 required int lastPage,
                 required int categoryId,
               }) => DocumentCompanion.insert(
                 id: id,
                 name: name,
+                filePath: filePath,
+                fileData: fileData,
                 lastAccess: lastAccess,
                 lastPage: lastPage,
                 categoryId: categoryId,

@@ -30,7 +30,7 @@ class _FloatingHorizontalMenuState extends State<FloatingHorizontalMenu>
   Widget build(BuildContext context) {
     Widget mainButton() {
       return SizedBox(
-        width: 48, // between normal (56) and mini (40)
+        width: 48,
         height: 48,
         child: Material(
           color: Theme.of(context).colorScheme.primary,

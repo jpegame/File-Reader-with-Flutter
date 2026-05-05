@@ -14,6 +14,13 @@ class ConfigDao extends DatabaseAccessor<AppDatabase> with _$ConfigDaoMixin {
     return row?.value;
   }
 
-  Future upsertConfig(String key, String value) => 
-      into(config).insertOnConflictUpdate(ConfigCompanion.insert(key: key, value: value));
+  Future<void> upsertConfig(String key, String value) {
+    return into(config).insert(
+      ConfigCompanion.insert(key: key, value: value),
+      onConflict: DoUpdate(
+        (old) => ConfigCompanion.custom(value: Constant(value)),
+        target: [config.key],
+      ),
+    );
+  }
 }
