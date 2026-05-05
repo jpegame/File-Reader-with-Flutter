@@ -71,7 +71,7 @@ class _HomePageState extends State<HomePage> {
                         height: 120,
                         width: double.infinity,
                         decoration: const BoxDecoration(
-                          color: Color.fromARGB(255, 218, 218, 218),
+                          color: Color.fromARGB(255, 243, 243, 243),
                         ),
                         child: const Center(
                           child: Icon(
