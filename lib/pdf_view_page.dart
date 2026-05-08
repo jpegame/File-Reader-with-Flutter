@@ -20,9 +20,11 @@ class _PdfPageState extends State<PdfPage> {
   final PdfViewerController _controller = PdfViewerController();
   PdfTextSearchResult? _searchResult;
   final TextEditingController _searchController = TextEditingController();
-  
-  Timer? _debounce;
-  int currentPage = 1;
+
+  Timer? _searchDebounce;
+  Timer? _saveDebounce;
+
+  final ValueNotifier<int> _currentPageNotifier = ValueNotifier<int>(1);
   int totalPages = 0;
   bool _showSearchBar = false;
   bool _isInitialJumpDone = false;
@@ -30,14 +32,15 @@ class _PdfPageState extends State<PdfPage> {
   @override
   void dispose() {
     _searchController.dispose();
-    _debounce?.cancel();
+    _searchDebounce?.cancel();
+    _saveDebounce?.cancel();
     super.dispose();
   }
 
   void _onSearchChanged(String text) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
 
-    _debounce = Timer(const Duration(milliseconds: 400), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
       if (text.isEmpty) {
         _searchResult?.clear();
         setState(() {});
@@ -60,9 +63,9 @@ class _PdfPageState extends State<PdfPage> {
   Future<void> _saveProgress(int page) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('last_page_id_${widget.doc.id}', page);
-    await (widget.db.update(widget.db.document)
-          ..where((t) => t.id.equals(widget.doc.id)))
-        .write(
+    await (widget.db.update(
+      widget.db.document,
+    )..where((t) => t.id.equals(widget.doc.id))).write(
       DocumentCompanion(
         lastPage: drift.Value(page),
         lastAccess: drift.Value(DateTime.now()),
@@ -74,7 +77,8 @@ class _PdfPageState extends State<PdfPage> {
     if (_isInitialJumpDone) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final int savedPage = prefs.getInt('last_page_id_${widget.doc.id}') ?? widget.doc.lastPage;
+    final int savedPage =
+        prefs.getInt('last_page_id_${widget.doc.id}') ?? widget.doc.lastPage;
 
     if (savedPage > 1) {
       Future.delayed(const Duration(milliseconds: 200), () {
@@ -102,15 +106,28 @@ class _PdfPageState extends State<PdfPage> {
           SfPdfViewer.memory(
             widget.doc.fileData!,
             controller: _controller,
-            currentSearchTextHighlightColor: const Color.fromRGBO(255, 72, 0, 0.35),
-            otherSearchTextHighlightColor: const Color.fromRGBO(208, 255, 0, 0.35),
+            currentSearchTextHighlightColor: const Color.fromRGBO(
+              255,
+              72,
+              0,
+              0.35,
+            ),
+            otherSearchTextHighlightColor: const Color.fromRGBO(
+              208,
+              255,
+              0,
+              0.35,
+            ),
             onDocumentLoaded: (details) {
               setState(() => totalPages = details.document.pages.count);
               _handleInitialJump();
             },
             onPageChanged: (details) {
-              setState(() => currentPage = details.newPageNumber);
-              _saveProgress(details.newPageNumber);
+              _currentPageNotifier.value = details.newPageNumber;
+              _saveDebounce?.cancel();
+              _saveDebounce = Timer(const Duration(milliseconds: 1500), () {
+                _saveProgress(details.newPageNumber);
+              });
             },
           ),
           Positioned(
@@ -137,16 +154,27 @@ class _PdfPageState extends State<PdfPage> {
           Positioned(
             bottom: 16,
             right: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(0, 0, 0, 0.6),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                "$currentPage / $totalPages",
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
+            child: ValueListenableBuilder<int>(
+              valueListenable: _currentPageNotifier,
+              builder: (context, pageValue, child) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(0, 0, 0, 0.6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    "$pageValue / $totalPages",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -166,17 +194,25 @@ class _PdfPageState extends State<PdfPage> {
                 controller: _searchController,
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: "Find in document...",
+                  hintText: "Procurar palavra",
                   fillColor: Colors.white,
                   filled: true,
                   prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 onChanged: _onSearchChanged,
               ),
             ),
-            IconButton(icon: const Icon(Icons.chevron_left), onPressed: _prevMatch),
-            IconButton(icon: const Icon(Icons.chevron_right), onPressed: _nextMatch),
+            IconButton(
+              icon: const Icon(Icons.chevron_left),
+              onPressed: _prevMatch,
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right),
+              onPressed: _nextMatch,
+            ),
             IconButton(
               icon: const Icon(Icons.close),
               onPressed: () {
