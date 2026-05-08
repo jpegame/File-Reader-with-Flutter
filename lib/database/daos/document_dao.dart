@@ -16,6 +16,10 @@ class DocumentDao extends DatabaseAccessor<AppDatabase>
     ])).watch();
   }
 
+  Future<int> deleteDocument(int docId) {
+    return (delete(document)..where((t) => t.id.equals(docId))).go();
+  }
+
   Future updateLastAccess(int docId) =>
       (update(document)..where((t) => t.id.equals(docId))).write(
         DocumentCompanion(lastAccess: Value(DateTime.now())),

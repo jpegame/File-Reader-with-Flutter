@@ -10,21 +10,18 @@ void main() {
   runApp(const MainApp());
 }
 
-const MaterialColor appColorTheme = MaterialColor(
-  0xFF3FA851,
-  <int, Color>{
-    50: Color(0xFFF2FBF3),
-    100: Color(0xFFE2F6E5),
-    200: Color(0xFFC6ECCC),
-    300: Color(0xFF98DDA4),
-    400: Color(0xFF64C475),
-    500: Color(0xFF3FA851),
-    600: Color(0xFF349A46),
-    700: Color(0xFF286D35),
-    800: Color(0xFF24572E),
-    900: Color(0xFF1F4827),
-  },
-);
+const MaterialColor appColorTheme = MaterialColor(0xFF3FA851, <int, Color>{
+  50: Color(0xFFF2FBF3),
+  100: Color(0xFFE2F6E5),
+  200: Color(0xFFC6ECCC),
+  300: Color(0xFF98DDA4),
+  400: Color(0xFF64C475),
+  500: Color(0xFF3FA851),
+  600: Color(0xFF349A46),
+  700: Color(0xFF286D35),
+  800: Color(0xFF24572E),
+  900: Color(0xFF1F4827),
+});
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -42,9 +39,7 @@ class _MainAppState extends State<MainApp> {
       final themeConfig = await _database.configDao.getValue('dark_mode');
       if (themeConfig != null) {
         setState(() {
-          _themeMode = themeConfig == 'true' 
-              ? ThemeMode.dark 
-              : ThemeMode.light;
+          _themeMode = themeConfig == 'true' ? ThemeMode.dark : ThemeMode.light;
         });
       }
     } catch (e) {
@@ -146,10 +141,7 @@ class _MainAppState extends State<MainApp> {
           hintStyle: TextStyle(color: Colors.grey[500]),
         ),
       ),
-      home: MainAppPage(
-        onToggleTheme: _toggleTheme, 
-        database: _database
-      ),
+      home: MainAppPage(onToggleTheme: _toggleTheme, database: _database),
     );
   }
 }
@@ -159,9 +151,9 @@ class MainAppPage extends StatefulWidget {
   final AppDatabase database;
 
   const MainAppPage({
-    super.key, 
-    required this.onToggleTheme, 
-    required this.database
+    super.key,
+    required this.onToggleTheme,
+    required this.database,
   });
 
   @override
@@ -177,7 +169,14 @@ class _MainAppPageState extends State<MainAppPage> {
 
     final List<Widget> pages = [
       HomePage(db: widget.database),
-      InsertPage(db: widget.database),
+      InsertPage(
+        db: widget.database,
+        onSave: () {
+          setState(() {
+            _currentIndex = 0;
+          });
+        },
+      ),
       ConfigPage(
         isDarkMode: isDarkMode,
         onThemeChanged: (_) => widget.onToggleTheme(),

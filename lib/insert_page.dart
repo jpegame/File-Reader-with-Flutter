@@ -7,7 +7,8 @@ import '../database/app_database.dart';
 
 class InsertPage extends StatefulWidget {
   final AppDatabase db;
-  const InsertPage({super.key, required this.db});
+  final VoidCallback onSave;
+  const InsertPage({super.key, required this.db, required this.onSave });
 
   @override
   State<InsertPage> createState() => _InsertPageState();
@@ -63,6 +64,8 @@ class _InsertPageState extends State<InsertPage> {
       fileData: kIsWeb ? _pickedFile!.bytes : null,
       filePath: kIsWeb ? null : _pickedFile!.path,
     );
+
+    widget.onSave();
   }
 
   void _showAddCategoryDialog() {
