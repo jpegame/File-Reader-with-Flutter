@@ -31,7 +31,11 @@ class _PdfPageState extends State<PdfPage> {
 
   @override
   void dispose() {
+    _currentPageNotifier.dispose();
     _searchController.dispose();
+    _searchResult?.clear();
+    _searchResult = null;
+
     _searchDebounce?.cancel();
     _saveDebounce?.cancel();
     super.dispose();
@@ -58,6 +62,7 @@ class _PdfPageState extends State<PdfPage> {
   void _clearSearch() {
     _searchController.clear();
     _searchResult?.clear();
+    _searchResult = null;
   }
 
   Future<void> _saveProgress(int page) async {
@@ -86,6 +91,44 @@ class _PdfPageState extends State<PdfPage> {
       });
     }
     _isInitialJumpDone = true;
+  }
+
+  void _onTextSelectionChanged(PdfTextSelectionChangedDetails details) async {
+    // 1. If text is null, the user probably cleared the selection
+    if (details.selectedText == null) return;
+
+    // 2. The "Magic" Fix: Ask the controller for the lines
+    // This returns a List<PdfTextLine> which works in virtually all v20+ versions
+    final List<PdfTextLine> selectedLines = _controller.getSelectedTextLines();
+
+    if (selectedLines.isEmpty) return;
+
+    // 3. Map the lines to your JSON format
+    final rectsList = selectedLines
+        .map(
+          (line) => {
+            'left': line.bounds.left,
+            'top': line.bounds.top,
+            'width': line.bounds.width,
+            'height': line.bounds.height,
+          },
+        )
+        .toList();
+
+    // 4. Save using your DAO
+    await widget.db.annotationDao.saveAnnotation(
+      AnnotationCompanion(
+        documentId: drift.Value(widget.doc.id),
+        page: drift.Value(_currentPageNotifier.value),
+        type: const drift.Value('highlight'),
+        content: drift.Value(details.selectedText),
+        rectsJson: drift.Value(jsonEncode(rectsList)),
+      ),
+    );
+
+    // 5. Cleanup
+    _controller.clearSelection();
+    setState(() {});
   }
 
   @override
