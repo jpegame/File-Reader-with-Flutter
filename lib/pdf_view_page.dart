@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,10 @@ class PdfPage extends StatefulWidget {
 
 class _PdfPageState extends State<PdfPage> {
   final PdfViewerController _controller = PdfViewerController();
+
+  final GlobalKey<SfPdfViewerState> _pdfViewerKey =
+      GlobalKey<SfPdfViewerState>();
+
   PdfTextSearchResult? _searchResult;
   final TextEditingController _searchController = TextEditingController();
 
@@ -29,16 +34,83 @@ class _PdfPageState extends State<PdfPage> {
   bool _showSearchBar = false;
   bool _isInitialJumpDone = false;
 
+  PdfTextSelectionChangedDetails? _currentSelectionDetails;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllAnnotations();
+  }
+
   @override
   void dispose() {
     _currentPageNotifier.dispose();
     _searchController.dispose();
     _searchResult?.clear();
     _searchResult = null;
-
     _searchDebounce?.cancel();
     _saveDebounce?.cancel();
+    _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAllAnnotations() async {
+    try {
+      final annotations = await (widget.db.select(
+        widget.db.annotation,
+      )..where((t) => t.documentId.equals(widget.doc.id))).get();
+
+      _controller.removeAllAnnotations();
+
+      for (var annotation in annotations) {
+        try {
+          final List<dynamic> rects = jsonDecode(annotation.rectsJson);
+          final List<PdfTextLine> textLines = [];
+
+          for (var r in rects) {
+            textLines.add(
+              PdfTextLine(
+                Rect.fromLTWH(
+                  (r['left'] as num).toDouble(),
+                  (r['top'] as num).toDouble(),
+                  (r['width'] as num).toDouble(),
+                  (r['height'] as num).toDouble(),
+                ),
+                "",
+                annotation.page,
+              ),
+            );
+          }
+
+          if (textLines.isNotEmpty) {
+            if (annotation.type == 'underline') {
+              final underline = UnderlineAnnotation(
+                textBoundsCollection: textLines,
+              );
+              underline.color = Colors.red;
+              _controller.addAnnotation(underline);
+            } else if (annotation.type == 'note') {
+              final noteLine = UnderlineAnnotation(
+                textBoundsCollection: textLines,
+              );
+              noteLine.color = Colors.blue;
+              _controller.addAnnotation(noteLine);
+            } else {
+              final highlight = HighlightAnnotation(
+                textBoundsCollection: textLines,
+              );
+              highlight.color = Colors.yellow;
+              highlight.opacity = 0.5; 
+              _controller.addAnnotation(highlight);
+            }
+          }
+        } catch (e) {
+          debugPrint("Failed parsing layout geometry matching bounds: $e");
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading annotations: $e");
+    }
   }
 
   void _onSearchChanged(String text) {
@@ -93,42 +165,59 @@ class _PdfPageState extends State<PdfPage> {
     _isInitialJumpDone = true;
   }
 
-  void _onTextSelectionChanged(PdfTextSelectionChangedDetails details) async {
-    // 1. If text is null, the user probably cleared the selection
-    if (details.selectedText == null) return;
+  void _onTextSelectionChanged(PdfTextSelectionChangedDetails details) {
+    setState(() {
+      if (details.selectedText == null ||
+          details.selectedText!.trim().isEmpty) {
+        _currentSelectionDetails = null;
+      } else {
+        _currentSelectionDetails = details;
+      }
+    });
+  }
 
-    // 2. The "Magic" Fix: Ask the controller for the lines
-    // This returns a List<PdfTextLine> which works in virtually all v20+ versions
-    final List<PdfTextLine> selectedLines = _controller.getSelectedTextLines();
+  Future<void> _executeSaveAnnotation(String type) async {
+    if (_currentSelectionDetails == null ||
+        _currentSelectionDetails!.selectedText == null) {
+      return;
+    }
 
-    if (selectedLines.isEmpty) return;
+    final String selectedText = _currentSelectionDetails!.selectedText!;
+    final int currentPage = _currentPageNotifier.value;
+    List<Map<String, double>> rectsList = [];
 
-    // 3. Map the lines to your JSON format
-    final rectsList = selectedLines
-        .map(
-          (line) => {
-            'left': line.bounds.left,
-            'top': line.bounds.top,
-            'width': line.bounds.width,
-            'height': line.bounds.height,
-          },
-        )
-        .toList();
+    final List<PdfTextLine>? selectedLines = _pdfViewerKey.currentState
+        ?.getSelectedTextLines();
 
-    // 4. Save using your DAO
+    setState(() {
+      _currentSelectionDetails = null;
+    });
+
+    if (selectedLines != null && selectedLines.isNotEmpty) {
+      for (PdfTextLine line in selectedLines) {
+        rectsList.add({
+          'left': line.bounds.left,
+          'top': line.bounds.top,
+          'width': line.bounds.width,
+          'height': line.bounds.height,
+        });
+      }
+    }
+
+    if (rectsList.isEmpty) return;
+
     await widget.db.annotationDao.saveAnnotation(
       AnnotationCompanion(
         documentId: drift.Value(widget.doc.id),
-        page: drift.Value(_currentPageNotifier.value),
-        type: const drift.Value('highlight'),
-        content: drift.Value(details.selectedText),
+        page: drift.Value(currentPage),
+        type: drift.Value(type),
+        content: drift.Value(selectedText),
         rectsJson: drift.Value(jsonEncode(rectsList)),
       ),
     );
 
-    // 5. Cleanup
     _controller.clearSelection();
-    setState(() {});
+    await _loadAllAnnotations();
   }
 
   @override
@@ -148,7 +237,10 @@ class _PdfPageState extends State<PdfPage> {
         children: [
           SfPdfViewer.memory(
             widget.doc.fileData!,
+            key: _pdfViewerKey,
             controller: _controller,
+            canShowTextSelectionMenu: false,
+            onTextSelectionChanged: _onTextSelectionChanged,
             currentSearchTextHighlightColor: const Color.fromRGBO(
               255,
               72,
@@ -164,6 +256,7 @@ class _PdfPageState extends State<PdfPage> {
             onDocumentLoaded: (details) {
               setState(() => totalPages = details.document.pages.count);
               _handleInitialJump();
+              _loadAllAnnotations();
             },
             onPageChanged: (details) {
               _currentPageNotifier.value = details.newPageNumber;
@@ -173,6 +266,71 @@ class _PdfPageState extends State<PdfPage> {
               });
             },
           ),
+
+          if (_currentSelectionDetails != null &&
+              _currentSelectionDetails!.globalSelectedRegion != null)
+            Builder(
+              builder: (context) {
+                final RenderBox? renderBox =
+                    context.findRenderObject() as RenderBox?;
+                final Offset localOffset = renderBox != null
+                    ? renderBox.globalToLocal(
+                        _currentSelectionDetails!
+                            .globalSelectedRegion!
+                            .topCenter,
+                      )
+                    : _currentSelectionDetails!.globalSelectedRegion!.topCenter;
+
+                return Positioned(
+                  top: (localOffset.dy - 60).clamp(
+                    10.0,
+                    MediaQuery.of(context).size.height,
+                  ),
+                  left: (localOffset.dx - 110).clamp(
+                    10.0,
+                    MediaQuery.of(context).size.width - 230,
+                  ),
+                  child: Material(
+                    elevation: 12,
+                    borderRadius: BorderRadius.circular(30),
+                    color: const Color(0xFF1E1E1E),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 4,
+                        horizontal: 8,
+                      ),
+                      width: 200,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.border_color,
+                              color: Colors.yellow,
+                              size: 20,
+                            ),
+                            tooltip: "Highlight",
+                            onPressed: () =>
+                                _executeSaveAnnotation('highlight'),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.format_underlined,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            tooltip: "Underline",
+                            onPressed: () =>
+                                _executeSaveAnnotation('underline'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+
           Positioned(
             bottom: 16,
             left: 16,
@@ -187,13 +345,12 @@ class _PdfPageState extends State<PdfPage> {
                 FloatingActionButton(
                   heroTag: "settings_fab",
                   mini: true,
-                  onPressed: () => print("Settings clicked"),
+                  onPressed: () => debugPrint("Settings clicked"),
                   child: const Icon(Icons.settings),
                 ),
               ],
             ),
           ),
-
           Positioned(
             bottom: 16,
             right: 16,
