@@ -74,7 +74,7 @@ class _HomePageState extends State<HomePage> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  childAspectRatio: 0.85,
+                  childAspectRatio: 1,
                 ),
                 itemCount: results.length,
                 itemBuilder: (context, index) {
@@ -105,7 +105,7 @@ class _HomePageState extends State<HomePage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
-                                height: 100,
+                                height: 120,
                                 width: double.infinity,
                                 decoration: const BoxDecoration(
                                   color: Color.fromARGB(255, 218, 218, 218),
