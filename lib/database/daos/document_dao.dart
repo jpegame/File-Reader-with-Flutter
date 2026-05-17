@@ -10,11 +10,17 @@ class DocumentDao extends DatabaseAccessor<AppDatabase>
     with _$DocumentDaoMixin {
   DocumentDao(AppDatabase db) : super(db);
 
-  Stream<List<TypedResult>> watchDocumentsWithCategory() {
-    return (select(document).join([
-      innerJoin(category, category.id.equalsExp(document.categoryId)),
-    ])).watch();
+  Stream<List<TypedResult>> watchDocumentsWithCategory({int? categoryId}) {
+  final query = select(document).join([
+    innerJoin(category, category.id.equalsExp(document.categoryId)),
+  ]);
+
+  if (categoryId != null) {
+    query.where(document.categoryId.equals(categoryId));
   }
+
+  return query.watch();
+}
 
   Future<int> deleteDocument(int docId) {
     return (delete(document)..where((t) => t.id.equals(docId))).go();
