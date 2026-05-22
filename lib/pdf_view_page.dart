@@ -19,7 +19,6 @@ class PdfPage extends StatefulWidget {
 
 class _PdfPageState extends State<PdfPage> {
   final PdfViewerController _controller = PdfViewerController();
-
   final GlobalKey<SfPdfViewerState> _pdfViewerKey =
       GlobalKey<SfPdfViewerState>();
 
@@ -100,7 +99,7 @@ class _PdfPageState extends State<PdfPage> {
                 textBoundsCollection: textLines,
               );
               highlight.color = Colors.yellow;
-              highlight.opacity = 0.5; 
+              highlight.opacity = 0.5;
               _controller.addAnnotation(highlight);
             }
           }
@@ -183,8 +182,8 @@ class _PdfPageState extends State<PdfPage> {
     }
 
     final String selectedText = _currentSelectionDetails!.selectedText!;
-    final int currentPage = _currentPageNotifier.value;
     List<Map<String, double>> rectsList = [];
+    int targetPage = _currentPageNotifier.value;
 
     final List<PdfTextLine>? selectedLines = _pdfViewerKey.currentState
         ?.getSelectedTextLines();
@@ -194,6 +193,8 @@ class _PdfPageState extends State<PdfPage> {
     });
 
     if (selectedLines != null && selectedLines.isNotEmpty) {
+      targetPage = selectedLines.first.pageNumber;
+
       for (PdfTextLine line in selectedLines) {
         rectsList.add({
           'left': line.bounds.left,
@@ -209,7 +210,7 @@ class _PdfPageState extends State<PdfPage> {
     await widget.db.annotationDao.saveAnnotation(
       AnnotationCompanion(
         documentId: drift.Value(widget.doc.id),
-        page: drift.Value(currentPage),
+        page: drift.Value(targetPage),
         type: drift.Value(type),
         content: drift.Value(selectedText),
         rectsJson: drift.Value(jsonEncode(rectsList)),
@@ -266,7 +267,6 @@ class _PdfPageState extends State<PdfPage> {
               });
             },
           ),
-
           if (_currentSelectionDetails != null &&
               _currentSelectionDetails!.globalSelectedRegion != null)
             Builder(
@@ -281,15 +281,12 @@ class _PdfPageState extends State<PdfPage> {
                       )
                     : _currentSelectionDetails!.globalSelectedRegion!.topCenter;
 
+                final double screenWidth = MediaQuery.of(context).size.width;
+                final double screenHeight = MediaQuery.of(context).size.height;
+
                 return Positioned(
-                  top: (localOffset.dy - 60).clamp(
-                    10.0,
-                    MediaQuery.of(context).size.height,
-                  ),
-                  left: (localOffset.dx - 110).clamp(
-                    10.0,
-                    MediaQuery.of(context).size.width - 230,
-                  ),
+                  top: (localOffset.dy - 60).clamp(10.0, screenHeight - 100),
+                  left: (localOffset.dx - 100).clamp(10.0, screenWidth - 210),
                   child: Material(
                     elevation: 12,
                     borderRadius: BorderRadius.circular(30),
@@ -330,7 +327,6 @@ class _PdfPageState extends State<PdfPage> {
                 );
               },
             ),
-
           Positioned(
             bottom: 16,
             left: 16,
