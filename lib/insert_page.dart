@@ -8,7 +8,7 @@ import '../database/app_database.dart';
 class InsertPage extends StatefulWidget {
   final AppDatabase db;
   final VoidCallback onSave;
-  const InsertPage({super.key, required this.db, required this.onSave });
+  const InsertPage({super.key, required this.db, required this.onSave});
 
   @override
   State<InsertPage> createState() => _InsertPageState();
@@ -37,6 +37,31 @@ class _InsertPageState extends State<InsertPage> {
     }
   }
 
+  String cleanFileName(String fileName) {
+    if (fileName.isEmpty) return '';
+
+    int lastDotIndex = fileName.lastIndexOf('.');
+    String nameWithoutExtension = (lastDotIndex != -1)
+        ? fileName.substring(0, lastDotIndex)
+        : fileName;
+
+    String cleaned = nameWithoutExtension
+        .replaceAllMapped(
+          RegExp(r'(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])'),
+          (Match m) => ' ',
+        )
+        .replaceAll(RegExp(r'[-_]'), ' ');
+
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return cleaned
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
+  }
+
   Future<void> _pickFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -49,7 +74,7 @@ class _InsertPageState extends State<InsertPage> {
         _pickedFile = result.files.first;
         _fileBytes = _pickedFile!.bytes;
         if (_nameController.text.isEmpty) {
-          _nameController.text = _pickedFile!.name;
+          _nameController.text = cleanFileName(_pickedFile!.name);
         }
       });
     }
