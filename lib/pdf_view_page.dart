@@ -34,6 +34,8 @@ class _PdfPageState extends State<PdfPage> {
   bool _isInitialJumpDone = false;
 
   PdfTextSelectionChangedDetails? _currentSelectionDetails;
+  List<AnnotationData> _dbStickyNotes = [];
+  bool _isCommentModeEnabled = false;
 
   @override
   void initState() {
@@ -60,12 +62,32 @@ class _PdfPageState extends State<PdfPage> {
       )..where((t) => t.documentId.equals(widget.doc.id))).get();
 
       _controller.removeAllAnnotations();
+      List<AnnotationData> freshStickyNotes = [];
 
       for (var annotation in annotations) {
         try {
           final List<dynamic> rects = jsonDecode(annotation.rectsJson);
-          final List<PdfTextLine> textLines = [];
 
+          if (annotation.type == 'sticky_note') {
+            freshStickyNotes.add(annotation);
+
+            final Offset position = Offset(
+              (rects[0]['left'] as num).toDouble(),
+              (rects[0]['top'] as num).toDouble(),
+            );
+
+            final stickyNote = StickyNoteAnnotation(
+              position: position,
+              pageNumber: annotation.page,
+              text: annotation.content ?? "",
+              icon: PdfStickyNoteIcon.comment,
+            );
+
+            _controller.addAnnotation(stickyNote);
+            continue;
+          }
+
+          final List<PdfTextLine> textLines = [];
           for (var r in rects) {
             textLines.add(
               PdfTextLine(
@@ -104,11 +126,129 @@ class _PdfPageState extends State<PdfPage> {
             }
           }
         } catch (e) {
-          debugPrint("Failed parsing layout geometry matching bounds: $e");
+          debugPrint("Failed parsing layout geometry: $e");
         }
       }
+
+      setState(() {
+        _dbStickyNotes = freshStickyNotes;
+      });
     } catch (e) {
       debugPrint("Error loading annotations: $e");
+    }
+  }
+  void _handlePageTap(PdfGestureDetails details) async {
+    if (!_isCommentModeEnabled) return;
+
+    setState(() {
+      _isCommentModeEnabled = false;
+    });
+
+    final Offset pagePosition = details.pagePosition;
+    final int pageNumber = details.pageNumber;
+
+    final TextEditingController commentController = TextEditingController();
+
+    final String? commentText = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Adicionar Nota de Papel"),
+        content: TextField(
+          controller: commentController,
+          autofocus: true,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: "Escreva seu comentário aqui...",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text("Cancelar"),
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.pop(context, commentController.text.trim()),
+            child: const Text("Salvar"),
+          ),
+        ],
+      ),
+    );
+
+    if (commentText == null || commentText.isEmpty) return;
+
+    List<Map<String, double>> geometry = [
+      {
+        'left': pagePosition.dx,
+        'top': pagePosition.dy,
+        'width': 30.0,
+        'height': 30.0,
+      },
+    ];
+
+    await widget.db.annotationDao.saveAnnotation(
+      AnnotationCompanion(
+        documentId: drift.Value(widget.doc.id),
+        page: drift.Value(pageNumber),
+        type: drift.Value('sticky_note'),
+        content: drift.Value(commentText),
+        rectsJson: drift.Value(jsonEncode(geometry)),
+      ),
+    );
+
+    await _loadAllAnnotations();
+  }
+
+  void _handleAnnotationSelected(Annotation annotation) {
+    if (annotation is StickyNoteAnnotation) {
+      AnnotationData? dbMatch;
+
+      for (var note in _dbStickyNotes) {
+        try {
+          final List<dynamic> rects = jsonDecode(note.rectsJson);
+          final double left = (rects[0]['left'] as num).toDouble();
+          final double top = (rects[0]['top'] as num).toDouble();
+
+          if (note.page == annotation.pageNumber &&
+              (left - annotation.position.dx).abs() < 0.1 &&
+              (top - annotation.position.dy).abs() < 0.1) {
+            dbMatch = note;
+            break;
+          }
+        } catch (_) {}
+      }
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Nota Papel - Pág. ${annotation.pageNumber}"),
+          content: SingleChildScrollView(child: Text(annotation.text)),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                if (dbMatch != null) {
+                  await (widget.db.delete(
+                    widget.db.annotation,
+                  )..where((t) => t.id.equals(dbMatch!.id))).go();
+                }
+                _controller.deselectAnnotation(annotation);
+                Navigator.pop(context);
+                _loadAllAnnotations();
+              },
+              child: const Text("Excluir", style: TextStyle(color: Colors.red)),
+            ),
+            TextButton(
+              onPressed: () {
+                _controller.deselectAnnotation(annotation);
+                Navigator.pop(context);
+              },
+              child: const Text("Fechar"),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -194,7 +334,6 @@ class _PdfPageState extends State<PdfPage> {
 
     if (selectedLines != null && selectedLines.isNotEmpty) {
       targetPage = selectedLines.first.pageNumber;
-
       for (PdfTextLine line in selectedLines) {
         rectsList.add({
           'left': line.bounds.left,
@@ -228,6 +367,28 @@ class _PdfPageState extends State<PdfPage> {
         title: Text(widget.doc.name),
         actions: [
           IconButton(
+            icon: Icon(
+              Icons.note_add,
+              color: _isCommentModeEnabled ? Colors.amber : null,
+            ),
+            tooltip: "Ferramenta Nota Autoadesiva",
+            onPressed: () {
+              setState(() {
+                _isCommentModeEnabled = !_isCommentModeEnabled;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    _isCommentModeEnabled
+                        ? "Modo de comentário ativo. Toque na página para fixar."
+                        : "Modo de comentário desativado.",
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             onPressed: () => setState(() => _showSearchBar = !_showSearchBar),
           ),
@@ -242,6 +403,8 @@ class _PdfPageState extends State<PdfPage> {
             controller: _controller,
             canShowTextSelectionMenu: false,
             onTextSelectionChanged: _onTextSelectionChanged,
+            onTap: _handlePageTap,
+            onAnnotationSelected: _handleAnnotationSelected,
             currentSearchTextHighlightColor: const Color.fromRGBO(
               255,
               72,
@@ -254,6 +417,7 @@ class _PdfPageState extends State<PdfPage> {
               0,
               0.35,
             ),
+            pageLayoutMode: PdfPageLayoutMode.continuous,
             onDocumentLoaded: (details) {
               setState(() => totalPages = details.document.pages.count);
               _handleInitialJump();
