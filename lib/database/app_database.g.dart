@@ -889,11 +889,12 @@ class DocumentCompanion extends UpdateCompanion<DocumentData> {
   }
 }
 
-class $MarkupTable extends Markup with TableInfo<$MarkupTable, MarkupData> {
+class $AnnotationTable extends Annotation
+    with TableInfo<$AnnotationTable, AnnotationData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $MarkupTable(this.attachedDatabase, [this._alias]);
+  $AnnotationTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
@@ -906,26 +907,6 @@ class $MarkupTable extends Markup with TableInfo<$MarkupTable, MarkupData> {
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
-  );
-  static const VerificationMeta _contentMeta = const VerificationMeta(
-    'content',
-  );
-  @override
-  late final GeneratedColumn<String> content = GeneratedColumn<String>(
-    'content',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _pageMeta = const VerificationMeta('page');
-  @override
-  late final GeneratedColumn<int> page = GeneratedColumn<int>(
-    'page',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
   );
   static const VerificationMeta _documentIdMeta = const VerificationMeta(
     'documentId',
@@ -941,282 +922,6 @@ class $MarkupTable extends Markup with TableInfo<$MarkupTable, MarkupData> {
       'REFERENCES document (id)',
     ),
   );
-  @override
-  List<GeneratedColumn> get $columns => [id, content, page, documentId];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'markup';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<MarkupData> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('content')) {
-      context.handle(
-        _contentMeta,
-        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_contentMeta);
-    }
-    if (data.containsKey('page')) {
-      context.handle(
-        _pageMeta,
-        page.isAcceptableOrUnknown(data['page']!, _pageMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_pageMeta);
-    }
-    if (data.containsKey('document_id')) {
-      context.handle(
-        _documentIdMeta,
-        documentId.isAcceptableOrUnknown(data['document_id']!, _documentIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_documentIdMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  MarkupData map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return MarkupData(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      content: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}content'],
-      )!,
-      page: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}page'],
-      )!,
-      documentId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}document_id'],
-      )!,
-    );
-  }
-
-  @override
-  $MarkupTable createAlias(String alias) {
-    return $MarkupTable(attachedDatabase, alias);
-  }
-}
-
-class MarkupData extends DataClass implements Insertable<MarkupData> {
-  final int id;
-  final String content;
-  final int page;
-  final int documentId;
-  const MarkupData({
-    required this.id,
-    required this.content,
-    required this.page,
-    required this.documentId,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['content'] = Variable<String>(content);
-    map['page'] = Variable<int>(page);
-    map['document_id'] = Variable<int>(documentId);
-    return map;
-  }
-
-  MarkupCompanion toCompanion(bool nullToAbsent) {
-    return MarkupCompanion(
-      id: Value(id),
-      content: Value(content),
-      page: Value(page),
-      documentId: Value(documentId),
-    );
-  }
-
-  factory MarkupData.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return MarkupData(
-      id: serializer.fromJson<int>(json['id']),
-      content: serializer.fromJson<String>(json['content']),
-      page: serializer.fromJson<int>(json['page']),
-      documentId: serializer.fromJson<int>(json['documentId']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'content': serializer.toJson<String>(content),
-      'page': serializer.toJson<int>(page),
-      'documentId': serializer.toJson<int>(documentId),
-    };
-  }
-
-  MarkupData copyWith({int? id, String? content, int? page, int? documentId}) =>
-      MarkupData(
-        id: id ?? this.id,
-        content: content ?? this.content,
-        page: page ?? this.page,
-        documentId: documentId ?? this.documentId,
-      );
-  MarkupData copyWithCompanion(MarkupCompanion data) {
-    return MarkupData(
-      id: data.id.present ? data.id.value : this.id,
-      content: data.content.present ? data.content.value : this.content,
-      page: data.page.present ? data.page.value : this.page,
-      documentId: data.documentId.present
-          ? data.documentId.value
-          : this.documentId,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('MarkupData(')
-          ..write('id: $id, ')
-          ..write('content: $content, ')
-          ..write('page: $page, ')
-          ..write('documentId: $documentId')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(id, content, page, documentId);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is MarkupData &&
-          other.id == this.id &&
-          other.content == this.content &&
-          other.page == this.page &&
-          other.documentId == this.documentId);
-}
-
-class MarkupCompanion extends UpdateCompanion<MarkupData> {
-  final Value<int> id;
-  final Value<String> content;
-  final Value<int> page;
-  final Value<int> documentId;
-  const MarkupCompanion({
-    this.id = const Value.absent(),
-    this.content = const Value.absent(),
-    this.page = const Value.absent(),
-    this.documentId = const Value.absent(),
-  });
-  MarkupCompanion.insert({
-    this.id = const Value.absent(),
-    required String content,
-    required int page,
-    required int documentId,
-  }) : content = Value(content),
-       page = Value(page),
-       documentId = Value(documentId);
-  static Insertable<MarkupData> custom({
-    Expression<int>? id,
-    Expression<String>? content,
-    Expression<int>? page,
-    Expression<int>? documentId,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (content != null) 'content': content,
-      if (page != null) 'page': page,
-      if (documentId != null) 'document_id': documentId,
-    });
-  }
-
-  MarkupCompanion copyWith({
-    Value<int>? id,
-    Value<String>? content,
-    Value<int>? page,
-    Value<int>? documentId,
-  }) {
-    return MarkupCompanion(
-      id: id ?? this.id,
-      content: content ?? this.content,
-      page: page ?? this.page,
-      documentId: documentId ?? this.documentId,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (content.present) {
-      map['content'] = Variable<String>(content.value);
-    }
-    if (page.present) {
-      map['page'] = Variable<int>(page.value);
-    }
-    if (documentId.present) {
-      map['document_id'] = Variable<int>(documentId.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('MarkupCompanion(')
-          ..write('id: $id, ')
-          ..write('content: $content, ')
-          ..write('page: $page, ')
-          ..write('documentId: $documentId')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $NotationTable extends Notation
-    with TableInfo<$NotationTable, NotationData> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $NotationTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _contentMeta = const VerificationMeta(
-    'content',
-  );
-  @override
-  late final GeneratedColumn<String> content = GeneratedColumn<String>(
-    'content',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
   static const VerificationMeta _pageMeta = const VerificationMeta('page');
   @override
   late final GeneratedColumn<int> page = GeneratedColumn<int>(
@@ -1226,93 +931,73 @@ class $NotationTable extends Notation
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _posXMeta = const VerificationMeta('posX');
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
   @override
-  late final GeneratedColumn<int> posX = GeneratedColumn<int>(
-    'pos_x',
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _posYMeta = const VerificationMeta('posY');
-  @override
-  late final GeneratedColumn<int> posY = GeneratedColumn<int>(
-    'pos_y',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _documentIdMeta = const VerificationMeta(
-    'documentId',
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
   );
   @override
-  late final GeneratedColumn<int> documentId = GeneratedColumn<int>(
-    'document_id',
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rectsJsonMeta = const VerificationMeta(
+    'rectsJson',
+  );
+  @override
+  late final GeneratedColumn<String> rectsJson = GeneratedColumn<String>(
+    'rects_json',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES document (id)',
-    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
   );
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    content,
-    page,
-    posX,
-    posY,
     documentId,
+    page,
+    type,
+    content,
+    rectsJson,
+    createdAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'notation';
+  static const String $name = 'annotation';
   @override
   VerificationContext validateIntegrity(
-    Insertable<NotationData> instance, {
+    Insertable<AnnotationData> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('content')) {
-      context.handle(
-        _contentMeta,
-        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_contentMeta);
-    }
-    if (data.containsKey('page')) {
-      context.handle(
-        _pageMeta,
-        page.isAcceptableOrUnknown(data['page']!, _pageMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_pageMeta);
-    }
-    if (data.containsKey('pos_x')) {
-      context.handle(
-        _posXMeta,
-        posX.isAcceptableOrUnknown(data['pos_x']!, _posXMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_posXMeta);
-    }
-    if (data.containsKey('pos_y')) {
-      context.handle(
-        _posYMeta,
-        posY.isAcceptableOrUnknown(data['pos_y']!, _posYMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_posYMeta);
     }
     if (data.containsKey('document_id')) {
       context.handle(
@@ -1322,98 +1007,147 @@ class $NotationTable extends Notation
     } else if (isInserting) {
       context.missing(_documentIdMeta);
     }
+    if (data.containsKey('page')) {
+      context.handle(
+        _pageMeta,
+        page.isAcceptableOrUnknown(data['page']!, _pageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pageMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    }
+    if (data.containsKey('rects_json')) {
+      context.handle(
+        _rectsJsonMeta,
+        rectsJson.isAcceptableOrUnknown(data['rects_json']!, _rectsJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rectsJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  NotationData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  AnnotationData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return NotationData(
+    return AnnotationData(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
-      )!,
-      content: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}content'],
-      )!,
-      page: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}page'],
-      )!,
-      posX: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}pos_x'],
-      )!,
-      posY: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}pos_y'],
       )!,
       documentId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}document_id'],
       )!,
+      page: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}page'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      ),
+      rectsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rects_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
     );
   }
 
   @override
-  $NotationTable createAlias(String alias) {
-    return $NotationTable(attachedDatabase, alias);
+  $AnnotationTable createAlias(String alias) {
+    return $AnnotationTable(attachedDatabase, alias);
   }
 }
 
-class NotationData extends DataClass implements Insertable<NotationData> {
+class AnnotationData extends DataClass implements Insertable<AnnotationData> {
   final int id;
-  final String content;
-  final int page;
-  final int posX;
-  final int posY;
   final int documentId;
-  const NotationData({
+  final int page;
+  final String type;
+  final String? content;
+  final String rectsJson;
+  final DateTime createdAt;
+  const AnnotationData({
     required this.id,
-    required this.content,
-    required this.page,
-    required this.posX,
-    required this.posY,
     required this.documentId,
+    required this.page,
+    required this.type,
+    this.content,
+    required this.rectsJson,
+    required this.createdAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['content'] = Variable<String>(content);
-    map['page'] = Variable<int>(page);
-    map['pos_x'] = Variable<int>(posX);
-    map['pos_y'] = Variable<int>(posY);
     map['document_id'] = Variable<int>(documentId);
+    map['page'] = Variable<int>(page);
+    map['type'] = Variable<String>(type);
+    if (!nullToAbsent || content != null) {
+      map['content'] = Variable<String>(content);
+    }
+    map['rects_json'] = Variable<String>(rectsJson);
+    map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
 
-  NotationCompanion toCompanion(bool nullToAbsent) {
-    return NotationCompanion(
+  AnnotationCompanion toCompanion(bool nullToAbsent) {
+    return AnnotationCompanion(
       id: Value(id),
-      content: Value(content),
-      page: Value(page),
-      posX: Value(posX),
-      posY: Value(posY),
       documentId: Value(documentId),
+      page: Value(page),
+      type: Value(type),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+      rectsJson: Value(rectsJson),
+      createdAt: Value(createdAt),
     );
   }
 
-  factory NotationData.fromJson(
+  factory AnnotationData.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return NotationData(
+    return AnnotationData(
       id: serializer.fromJson<int>(json['id']),
-      content: serializer.fromJson<String>(json['content']),
-      page: serializer.fromJson<int>(json['page']),
-      posX: serializer.fromJson<int>(json['posX']),
-      posY: serializer.fromJson<int>(json['posY']),
       documentId: serializer.fromJson<int>(json['documentId']),
+      page: serializer.fromJson<int>(json['page']),
+      type: serializer.fromJson<String>(json['type']),
+      content: serializer.fromJson<String?>(json['content']),
+      rectsJson: serializer.fromJson<String>(json['rectsJson']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
   @override
@@ -1421,129 +1155,142 @@ class NotationData extends DataClass implements Insertable<NotationData> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'content': serializer.toJson<String>(content),
-      'page': serializer.toJson<int>(page),
-      'posX': serializer.toJson<int>(posX),
-      'posY': serializer.toJson<int>(posY),
       'documentId': serializer.toJson<int>(documentId),
+      'page': serializer.toJson<int>(page),
+      'type': serializer.toJson<String>(type),
+      'content': serializer.toJson<String?>(content),
+      'rectsJson': serializer.toJson<String>(rectsJson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
 
-  NotationData copyWith({
+  AnnotationData copyWith({
     int? id,
-    String? content,
-    int? page,
-    int? posX,
-    int? posY,
     int? documentId,
-  }) => NotationData(
+    int? page,
+    String? type,
+    Value<String?> content = const Value.absent(),
+    String? rectsJson,
+    DateTime? createdAt,
+  }) => AnnotationData(
     id: id ?? this.id,
-    content: content ?? this.content,
-    page: page ?? this.page,
-    posX: posX ?? this.posX,
-    posY: posY ?? this.posY,
     documentId: documentId ?? this.documentId,
+    page: page ?? this.page,
+    type: type ?? this.type,
+    content: content.present ? content.value : this.content,
+    rectsJson: rectsJson ?? this.rectsJson,
+    createdAt: createdAt ?? this.createdAt,
   );
-  NotationData copyWithCompanion(NotationCompanion data) {
-    return NotationData(
+  AnnotationData copyWithCompanion(AnnotationCompanion data) {
+    return AnnotationData(
       id: data.id.present ? data.id.value : this.id,
-      content: data.content.present ? data.content.value : this.content,
-      page: data.page.present ? data.page.value : this.page,
-      posX: data.posX.present ? data.posX.value : this.posX,
-      posY: data.posY.present ? data.posY.value : this.posY,
       documentId: data.documentId.present
           ? data.documentId.value
           : this.documentId,
+      page: data.page.present ? data.page.value : this.page,
+      type: data.type.present ? data.type.value : this.type,
+      content: data.content.present ? data.content.value : this.content,
+      rectsJson: data.rectsJson.present ? data.rectsJson.value : this.rectsJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('NotationData(')
+    return (StringBuffer('AnnotationData(')
           ..write('id: $id, ')
-          ..write('content: $content, ')
+          ..write('documentId: $documentId, ')
           ..write('page: $page, ')
-          ..write('posX: $posX, ')
-          ..write('posY: $posY, ')
-          ..write('documentId: $documentId')
+          ..write('type: $type, ')
+          ..write('content: $content, ')
+          ..write('rectsJson: $rectsJson, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, content, page, posX, posY, documentId);
+  int get hashCode =>
+      Object.hash(id, documentId, page, type, content, rectsJson, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is NotationData &&
+      (other is AnnotationData &&
           other.id == this.id &&
-          other.content == this.content &&
+          other.documentId == this.documentId &&
           other.page == this.page &&
-          other.posX == this.posX &&
-          other.posY == this.posY &&
-          other.documentId == this.documentId);
+          other.type == this.type &&
+          other.content == this.content &&
+          other.rectsJson == this.rectsJson &&
+          other.createdAt == this.createdAt);
 }
 
-class NotationCompanion extends UpdateCompanion<NotationData> {
+class AnnotationCompanion extends UpdateCompanion<AnnotationData> {
   final Value<int> id;
-  final Value<String> content;
-  final Value<int> page;
-  final Value<int> posX;
-  final Value<int> posY;
   final Value<int> documentId;
-  const NotationCompanion({
+  final Value<int> page;
+  final Value<String> type;
+  final Value<String?> content;
+  final Value<String> rectsJson;
+  final Value<DateTime> createdAt;
+  const AnnotationCompanion({
     this.id = const Value.absent(),
-    this.content = const Value.absent(),
-    this.page = const Value.absent(),
-    this.posX = const Value.absent(),
-    this.posY = const Value.absent(),
     this.documentId = const Value.absent(),
+    this.page = const Value.absent(),
+    this.type = const Value.absent(),
+    this.content = const Value.absent(),
+    this.rectsJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
   });
-  NotationCompanion.insert({
+  AnnotationCompanion.insert({
     this.id = const Value.absent(),
-    required String content,
-    required int page,
-    required int posX,
-    required int posY,
     required int documentId,
-  }) : content = Value(content),
+    required int page,
+    required String type,
+    this.content = const Value.absent(),
+    required String rectsJson,
+    this.createdAt = const Value.absent(),
+  }) : documentId = Value(documentId),
        page = Value(page),
-       posX = Value(posX),
-       posY = Value(posY),
-       documentId = Value(documentId);
-  static Insertable<NotationData> custom({
+       type = Value(type),
+       rectsJson = Value(rectsJson);
+  static Insertable<AnnotationData> custom({
     Expression<int>? id,
-    Expression<String>? content,
-    Expression<int>? page,
-    Expression<int>? posX,
-    Expression<int>? posY,
     Expression<int>? documentId,
+    Expression<int>? page,
+    Expression<String>? type,
+    Expression<String>? content,
+    Expression<String>? rectsJson,
+    Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (content != null) 'content': content,
-      if (page != null) 'page': page,
-      if (posX != null) 'pos_x': posX,
-      if (posY != null) 'pos_y': posY,
       if (documentId != null) 'document_id': documentId,
+      if (page != null) 'page': page,
+      if (type != null) 'type': type,
+      if (content != null) 'content': content,
+      if (rectsJson != null) 'rects_json': rectsJson,
+      if (createdAt != null) 'created_at': createdAt,
     });
   }
 
-  NotationCompanion copyWith({
+  AnnotationCompanion copyWith({
     Value<int>? id,
-    Value<String>? content,
-    Value<int>? page,
-    Value<int>? posX,
-    Value<int>? posY,
     Value<int>? documentId,
+    Value<int>? page,
+    Value<String>? type,
+    Value<String?>? content,
+    Value<String>? rectsJson,
+    Value<DateTime>? createdAt,
   }) {
-    return NotationCompanion(
+    return AnnotationCompanion(
       id: id ?? this.id,
-      content: content ?? this.content,
-      page: page ?? this.page,
-      posX: posX ?? this.posX,
-      posY: posY ?? this.posY,
       documentId: documentId ?? this.documentId,
+      page: page ?? this.page,
+      type: type ?? this.type,
+      content: content ?? this.content,
+      rectsJson: rectsJson ?? this.rectsJson,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -1553,33 +1300,37 @@ class NotationCompanion extends UpdateCompanion<NotationData> {
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
-    if (content.present) {
-      map['content'] = Variable<String>(content.value);
+    if (documentId.present) {
+      map['document_id'] = Variable<int>(documentId.value);
     }
     if (page.present) {
       map['page'] = Variable<int>(page.value);
     }
-    if (posX.present) {
-      map['pos_x'] = Variable<int>(posX.value);
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
     }
-    if (posY.present) {
-      map['pos_y'] = Variable<int>(posY.value);
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
     }
-    if (documentId.present) {
-      map['document_id'] = Variable<int>(documentId.value);
+    if (rectsJson.present) {
+      map['rects_json'] = Variable<String>(rectsJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
     }
     return map;
   }
 
   @override
   String toString() {
-    return (StringBuffer('NotationCompanion(')
+    return (StringBuffer('AnnotationCompanion(')
           ..write('id: $id, ')
-          ..write('content: $content, ')
+          ..write('documentId: $documentId, ')
           ..write('page: $page, ')
-          ..write('posX: $posX, ')
-          ..write('posY: $posY, ')
-          ..write('documentId: $documentId')
+          ..write('type: $type, ')
+          ..write('content: $content, ')
+          ..write('rectsJson: $rectsJson, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -1591,13 +1342,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CategoryTable category = $CategoryTable(this);
   late final $ConfigTable config = $ConfigTable(this);
   late final $DocumentTable document = $DocumentTable(this);
-  late final $MarkupTable markup = $MarkupTable(this);
-  late final $NotationTable notation = $NotationTable(this);
+  late final $AnnotationTable annotation = $AnnotationTable(this);
   late final CategoryDao categoryDao = CategoryDao(this as AppDatabase);
   late final ConfigDao configDao = ConfigDao(this as AppDatabase);
   late final DocumentDao documentDao = DocumentDao(this as AppDatabase);
-  late final MarkupDao markupDao = MarkupDao(this as AppDatabase);
-  late final NotationDao notationDao = NotationDao(this as AppDatabase);
+  late final AnnotationDao annotationDao = AnnotationDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1606,8 +1355,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     category,
     config,
     document,
-    markup,
-    notation,
+    annotation,
   ];
 }
 
@@ -2017,38 +1765,19 @@ final class $$DocumentTableReferences
     );
   }
 
-  static MultiTypedResultKey<$MarkupTable, List<MarkupData>> _markupRefsTable(
-    _$AppDatabase db,
-  ) => MultiTypedResultKey.fromTable(
-    db.markup,
-    aliasName: $_aliasNameGenerator(db.document.id, db.markup.documentId),
+  static MultiTypedResultKey<$AnnotationTable, List<AnnotationData>>
+  _annotationRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.annotation,
+    aliasName: $_aliasNameGenerator(db.document.id, db.annotation.documentId),
   );
 
-  $$MarkupTableProcessedTableManager get markupRefs {
-    final manager = $$MarkupTableTableManager(
+  $$AnnotationTableProcessedTableManager get annotationRefs {
+    final manager = $$AnnotationTableTableManager(
       $_db,
-      $_db.markup,
+      $_db.annotation,
     ).filter((f) => f.documentId.id.sqlEquals($_itemColumn<int>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_markupRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$NotationTable, List<NotationData>>
-  _notationRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.notation,
-    aliasName: $_aliasNameGenerator(db.document.id, db.notation.documentId),
-  );
-
-  $$NotationTableProcessedTableManager get notationRefs {
-    final manager = $$NotationTableTableManager(
-      $_db,
-      $_db.notation,
-    ).filter((f) => f.documentId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_notationRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(_annotationRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -2117,47 +1846,22 @@ class $$DocumentTableFilterComposer
     return composer;
   }
 
-  Expression<bool> markupRefs(
-    Expression<bool> Function($$MarkupTableFilterComposer f) f,
+  Expression<bool> annotationRefs(
+    Expression<bool> Function($$AnnotationTableFilterComposer f) f,
   ) {
-    final $$MarkupTableFilterComposer composer = $composerBuilder(
+    final $$AnnotationTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.markup,
+      referencedTable: $db.annotation,
       getReferencedColumn: (t) => t.documentId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$MarkupTableFilterComposer(
+          }) => $$AnnotationTableFilterComposer(
             $db: $db,
-            $table: $db.markup,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> notationRefs(
-    Expression<bool> Function($$NotationTableFilterComposer f) f,
-  ) {
-    final $$NotationTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.notation,
-      getReferencedColumn: (t) => t.documentId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$NotationTableFilterComposer(
-            $db: $db,
-            $table: $db.notation,
+            $table: $db.annotation,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2283,47 +1987,22 @@ class $$DocumentTableAnnotationComposer
     return composer;
   }
 
-  Expression<T> markupRefs<T extends Object>(
-    Expression<T> Function($$MarkupTableAnnotationComposer a) f,
+  Expression<T> annotationRefs<T extends Object>(
+    Expression<T> Function($$AnnotationTableAnnotationComposer a) f,
   ) {
-    final $$MarkupTableAnnotationComposer composer = $composerBuilder(
+    final $$AnnotationTableAnnotationComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.markup,
+      referencedTable: $db.annotation,
       getReferencedColumn: (t) => t.documentId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$MarkupTableAnnotationComposer(
+          }) => $$AnnotationTableAnnotationComposer(
             $db: $db,
-            $table: $db.markup,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> notationRefs<T extends Object>(
-    Expression<T> Function($$NotationTableAnnotationComposer a) f,
-  ) {
-    final $$NotationTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.notation,
-      getReferencedColumn: (t) => t.documentId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$NotationTableAnnotationComposer(
-            $db: $db,
-            $table: $db.notation,
+            $table: $db.annotation,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2347,11 +2026,7 @@ class $$DocumentTableTableManager
           $$DocumentTableUpdateCompanionBuilder,
           (DocumentData, $$DocumentTableReferences),
           DocumentData,
-          PrefetchHooks Function({
-            bool categoryId,
-            bool markupRefs,
-            bool notationRefs,
-          })
+          PrefetchHooks Function({bool categoryId, bool annotationRefs})
         > {
   $$DocumentTableTableManager(_$AppDatabase db, $DocumentTable table)
     : super(
@@ -2409,13 +2084,10 @@ class $$DocumentTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({categoryId = false, markupRefs = false, notationRefs = false}) {
+              ({categoryId = false, annotationRefs = false}) {
                 return PrefetchHooks(
                   db: db,
-                  explicitlyWatchedTables: [
-                    if (markupRefs) db.markup,
-                    if (notationRefs) db.notation,
-                  ],
+                  explicitlyWatchedTables: [if (annotationRefs) db.annotation],
                   addJoins:
                       <
                         T extends TableManagerState<
@@ -2450,42 +2122,21 @@ class $$DocumentTableTableManager
                       },
                   getPrefetchedDataCallback: (items) async {
                     return [
-                      if (markupRefs)
+                      if (annotationRefs)
                         await $_getPrefetchedData<
                           DocumentData,
                           $DocumentTable,
-                          MarkupData
+                          AnnotationData
                         >(
                           currentTable: table,
                           referencedTable: $$DocumentTableReferences
-                              ._markupRefsTable(db),
+                              ._annotationRefsTable(db),
                           managerFromTypedResult: (p0) =>
                               $$DocumentTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).markupRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.documentId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (notationRefs)
-                        await $_getPrefetchedData<
-                          DocumentData,
-                          $DocumentTable,
-                          NotationData
-                        >(
-                          currentTable: table,
-                          referencedTable: $$DocumentTableReferences
-                              ._notationRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$DocumentTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).notationRefs,
+                              ).annotationRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.documentId == item.id,
@@ -2512,328 +2163,36 @@ typedef $$DocumentTableProcessedTableManager =
       $$DocumentTableUpdateCompanionBuilder,
       (DocumentData, $$DocumentTableReferences),
       DocumentData,
-      PrefetchHooks Function({
-        bool categoryId,
-        bool markupRefs,
-        bool notationRefs,
-      })
+      PrefetchHooks Function({bool categoryId, bool annotationRefs})
     >;
-typedef $$MarkupTableCreateCompanionBuilder =
-    MarkupCompanion Function({
+typedef $$AnnotationTableCreateCompanionBuilder =
+    AnnotationCompanion Function({
       Value<int> id,
-      required String content,
-      required int page,
       required int documentId,
-    });
-typedef $$MarkupTableUpdateCompanionBuilder =
-    MarkupCompanion Function({
-      Value<int> id,
-      Value<String> content,
-      Value<int> page,
-      Value<int> documentId,
-    });
-
-final class $$MarkupTableReferences
-    extends BaseReferences<_$AppDatabase, $MarkupTable, MarkupData> {
-  $$MarkupTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $DocumentTable _documentIdTable(_$AppDatabase db) => db.document
-      .createAlias($_aliasNameGenerator(db.markup.documentId, db.document.id));
-
-  $$DocumentTableProcessedTableManager get documentId {
-    final $_column = $_itemColumn<int>('document_id')!;
-
-    final manager = $$DocumentTableTableManager(
-      $_db,
-      $_db.document,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_documentIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$MarkupTableFilterComposer
-    extends Composer<_$AppDatabase, $MarkupTable> {
-  $$MarkupTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get page => $composableBuilder(
-    column: $table.page,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$DocumentTableFilterComposer get documentId {
-    final $$DocumentTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.documentId,
-      referencedTable: $db.document,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DocumentTableFilterComposer(
-            $db: $db,
-            $table: $db.document,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$MarkupTableOrderingComposer
-    extends Composer<_$AppDatabase, $MarkupTable> {
-  $$MarkupTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get page => $composableBuilder(
-    column: $table.page,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$DocumentTableOrderingComposer get documentId {
-    final $$DocumentTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.documentId,
-      referencedTable: $db.document,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DocumentTableOrderingComposer(
-            $db: $db,
-            $table: $db.document,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$MarkupTableAnnotationComposer
-    extends Composer<_$AppDatabase, $MarkupTable> {
-  $$MarkupTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get content =>
-      $composableBuilder(column: $table.content, builder: (column) => column);
-
-  GeneratedColumn<int> get page =>
-      $composableBuilder(column: $table.page, builder: (column) => column);
-
-  $$DocumentTableAnnotationComposer get documentId {
-    final $$DocumentTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.documentId,
-      referencedTable: $db.document,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DocumentTableAnnotationComposer(
-            $db: $db,
-            $table: $db.document,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$MarkupTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $MarkupTable,
-          MarkupData,
-          $$MarkupTableFilterComposer,
-          $$MarkupTableOrderingComposer,
-          $$MarkupTableAnnotationComposer,
-          $$MarkupTableCreateCompanionBuilder,
-          $$MarkupTableUpdateCompanionBuilder,
-          (MarkupData, $$MarkupTableReferences),
-          MarkupData,
-          PrefetchHooks Function({bool documentId})
-        > {
-  $$MarkupTableTableManager(_$AppDatabase db, $MarkupTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$MarkupTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$MarkupTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$MarkupTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<String> content = const Value.absent(),
-                Value<int> page = const Value.absent(),
-                Value<int> documentId = const Value.absent(),
-              }) => MarkupCompanion(
-                id: id,
-                content: content,
-                page: page,
-                documentId: documentId,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required String content,
-                required int page,
-                required int documentId,
-              }) => MarkupCompanion.insert(
-                id: id,
-                content: content,
-                page: page,
-                documentId: documentId,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) =>
-                    (e.readTable(table), $$MarkupTableReferences(db, table, e)),
-              )
-              .toList(),
-          prefetchHooksCallback: ({documentId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (documentId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.documentId,
-                                referencedTable: $$MarkupTableReferences
-                                    ._documentIdTable(db),
-                                referencedColumn: $$MarkupTableReferences
-                                    ._documentIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$MarkupTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $MarkupTable,
-      MarkupData,
-      $$MarkupTableFilterComposer,
-      $$MarkupTableOrderingComposer,
-      $$MarkupTableAnnotationComposer,
-      $$MarkupTableCreateCompanionBuilder,
-      $$MarkupTableUpdateCompanionBuilder,
-      (MarkupData, $$MarkupTableReferences),
-      MarkupData,
-      PrefetchHooks Function({bool documentId})
-    >;
-typedef $$NotationTableCreateCompanionBuilder =
-    NotationCompanion Function({
-      Value<int> id,
-      required String content,
       required int page,
-      required int posX,
-      required int posY,
-      required int documentId,
+      required String type,
+      Value<String?> content,
+      required String rectsJson,
+      Value<DateTime> createdAt,
     });
-typedef $$NotationTableUpdateCompanionBuilder =
-    NotationCompanion Function({
+typedef $$AnnotationTableUpdateCompanionBuilder =
+    AnnotationCompanion Function({
       Value<int> id,
-      Value<String> content,
-      Value<int> page,
-      Value<int> posX,
-      Value<int> posY,
       Value<int> documentId,
+      Value<int> page,
+      Value<String> type,
+      Value<String?> content,
+      Value<String> rectsJson,
+      Value<DateTime> createdAt,
     });
 
-final class $$NotationTableReferences
-    extends BaseReferences<_$AppDatabase, $NotationTable, NotationData> {
-  $$NotationTableReferences(super.$_db, super.$_table, super.$_typedResult);
+final class $$AnnotationTableReferences
+    extends BaseReferences<_$AppDatabase, $AnnotationTable, AnnotationData> {
+  $$AnnotationTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $DocumentTable _documentIdTable(_$AppDatabase db) =>
       db.document.createAlias(
-        $_aliasNameGenerator(db.notation.documentId, db.document.id),
+        $_aliasNameGenerator(db.annotation.documentId, db.document.id),
       );
 
   $$DocumentTableProcessedTableManager get documentId {
@@ -2851,9 +2210,9 @@ final class $$NotationTableReferences
   }
 }
 
-class $$NotationTableFilterComposer
-    extends Composer<_$AppDatabase, $NotationTable> {
-  $$NotationTableFilterComposer({
+class $$AnnotationTableFilterComposer
+    extends Composer<_$AppDatabase, $AnnotationTable> {
+  $$AnnotationTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2865,23 +2224,28 @@ class $$NotationTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<int> get page => $composableBuilder(
     column: $table.page,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get posX => $composableBuilder(
-    column: $table.posX,
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get posY => $composableBuilder(
-    column: $table.posY,
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rectsJson => $composableBuilder(
+    column: $table.rectsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2909,9 +2273,9 @@ class $$NotationTableFilterComposer
   }
 }
 
-class $$NotationTableOrderingComposer
-    extends Composer<_$AppDatabase, $NotationTable> {
-  $$NotationTableOrderingComposer({
+class $$AnnotationTableOrderingComposer
+    extends Composer<_$AppDatabase, $AnnotationTable> {
+  $$AnnotationTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2923,23 +2287,28 @@ class $$NotationTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<int> get page => $composableBuilder(
     column: $table.page,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get posX => $composableBuilder(
-    column: $table.posX,
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get posY => $composableBuilder(
-    column: $table.posY,
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rectsJson => $composableBuilder(
+    column: $table.rectsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2967,9 +2336,9 @@ class $$NotationTableOrderingComposer
   }
 }
 
-class $$NotationTableAnnotationComposer
-    extends Composer<_$AppDatabase, $NotationTable> {
-  $$NotationTableAnnotationComposer({
+class $$AnnotationTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AnnotationTable> {
+  $$AnnotationTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -2979,17 +2348,20 @@ class $$NotationTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get content =>
-      $composableBuilder(column: $table.content, builder: (column) => column);
-
   GeneratedColumn<int> get page =>
       $composableBuilder(column: $table.page, builder: (column) => column);
 
-  GeneratedColumn<int> get posX =>
-      $composableBuilder(column: $table.posX, builder: (column) => column);
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
 
-  GeneratedColumn<int> get posY =>
-      $composableBuilder(column: $table.posY, builder: (column) => column);
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get rectsJson =>
+      $composableBuilder(column: $table.rectsJson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
   $$DocumentTableAnnotationComposer get documentId {
     final $$DocumentTableAnnotationComposer composer = $composerBuilder(
@@ -3015,69 +2387,73 @@ class $$NotationTableAnnotationComposer
   }
 }
 
-class $$NotationTableTableManager
+class $$AnnotationTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $NotationTable,
-          NotationData,
-          $$NotationTableFilterComposer,
-          $$NotationTableOrderingComposer,
-          $$NotationTableAnnotationComposer,
-          $$NotationTableCreateCompanionBuilder,
-          $$NotationTableUpdateCompanionBuilder,
-          (NotationData, $$NotationTableReferences),
-          NotationData,
+          $AnnotationTable,
+          AnnotationData,
+          $$AnnotationTableFilterComposer,
+          $$AnnotationTableOrderingComposer,
+          $$AnnotationTableAnnotationComposer,
+          $$AnnotationTableCreateCompanionBuilder,
+          $$AnnotationTableUpdateCompanionBuilder,
+          (AnnotationData, $$AnnotationTableReferences),
+          AnnotationData,
           PrefetchHooks Function({bool documentId})
         > {
-  $$NotationTableTableManager(_$AppDatabase db, $NotationTable table)
+  $$AnnotationTableTableManager(_$AppDatabase db, $AnnotationTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$NotationTableFilterComposer($db: db, $table: table),
+              $$AnnotationTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$NotationTableOrderingComposer($db: db, $table: table),
+              $$AnnotationTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$NotationTableAnnotationComposer($db: db, $table: table),
+              $$AnnotationTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<String> content = const Value.absent(),
-                Value<int> page = const Value.absent(),
-                Value<int> posX = const Value.absent(),
-                Value<int> posY = const Value.absent(),
                 Value<int> documentId = const Value.absent(),
-              }) => NotationCompanion(
+                Value<int> page = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String?> content = const Value.absent(),
+                Value<String> rectsJson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => AnnotationCompanion(
                 id: id,
-                content: content,
-                page: page,
-                posX: posX,
-                posY: posY,
                 documentId: documentId,
+                page: page,
+                type: type,
+                content: content,
+                rectsJson: rectsJson,
+                createdAt: createdAt,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required String content,
-                required int page,
-                required int posX,
-                required int posY,
                 required int documentId,
-              }) => NotationCompanion.insert(
+                required int page,
+                required String type,
+                Value<String?> content = const Value.absent(),
+                required String rectsJson,
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => AnnotationCompanion.insert(
                 id: id,
-                content: content,
-                page: page,
-                posX: posX,
-                posY: posY,
                 documentId: documentId,
+                page: page,
+                type: type,
+                content: content,
+                rectsJson: rectsJson,
+                createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
                   e.readTable(table),
-                  $$NotationTableReferences(db, table, e),
+                  $$AnnotationTableReferences(db, table, e),
                 ),
               )
               .toList(),
@@ -3106,9 +2482,9 @@ class $$NotationTableTableManager
                           state.withJoin(
                                 currentTable: table,
                                 currentColumn: table.documentId,
-                                referencedTable: $$NotationTableReferences
+                                referencedTable: $$AnnotationTableReferences
                                     ._documentIdTable(db),
-                                referencedColumn: $$NotationTableReferences
+                                referencedColumn: $$AnnotationTableReferences
                                     ._documentIdTable(db)
                                     .id,
                               )
@@ -3126,18 +2502,18 @@ class $$NotationTableTableManager
       );
 }
 
-typedef $$NotationTableProcessedTableManager =
+typedef $$AnnotationTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $NotationTable,
-      NotationData,
-      $$NotationTableFilterComposer,
-      $$NotationTableOrderingComposer,
-      $$NotationTableAnnotationComposer,
-      $$NotationTableCreateCompanionBuilder,
-      $$NotationTableUpdateCompanionBuilder,
-      (NotationData, $$NotationTableReferences),
-      NotationData,
+      $AnnotationTable,
+      AnnotationData,
+      $$AnnotationTableFilterComposer,
+      $$AnnotationTableOrderingComposer,
+      $$AnnotationTableAnnotationComposer,
+      $$AnnotationTableCreateCompanionBuilder,
+      $$AnnotationTableUpdateCompanionBuilder,
+      (AnnotationData, $$AnnotationTableReferences),
+      AnnotationData,
       PrefetchHooks Function({bool documentId})
     >;
 
@@ -3150,8 +2526,6 @@ class $AppDatabaseManager {
       $$ConfigTableTableManager(_db, _db.config);
   $$DocumentTableTableManager get document =>
       $$DocumentTableTableManager(_db, _db.document);
-  $$MarkupTableTableManager get markup =>
-      $$MarkupTableTableManager(_db, _db.markup);
-  $$NotationTableTableManager get notation =>
-      $$NotationTableTableManager(_db, _db.notation);
+  $$AnnotationTableTableManager get annotation =>
+      $$AnnotationTableTableManager(_db, _db.annotation);
 }
