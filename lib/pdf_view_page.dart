@@ -10,6 +10,7 @@ import 'floating_horizontal_menu.dart';
 import 'utils/annotation_extension.dart';
 import 'components/pdf_search_bar.dart';
 import 'components/pdf_text_selection_toolbar.dart';
+import 'components/pdf_read_mode_overlay.dart';
 
 class PdfPage extends StatefulWidget {
   final DocumentData doc;
@@ -36,6 +37,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
   bool _showSearchBar = false;
   bool _isInitialJumpDone = false;
   bool _isCommentModeEnabled = false;
+  bool _isReadModeEnabled = false;
 
   PdfTextSelectionChangedDetails? _currentSelectionDetails;
   List<AnnotationData> _dbStickyNotes = [];
@@ -294,6 +296,17 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
             icon: const Icon(Icons.search),
             onPressed: () => setState(() => _showSearchBar = !_showSearchBar),
           ),
+          IconButton(
+            icon: Icon(
+              _isReadModeEnabled
+                  ? Icons.chrome_reader_mode
+                  : Icons.chrome_reader_mode_outlined,
+              color: _isReadModeEnabled ? Colors.greenAccent : null,
+            ),
+            tooltip: "Modo Leitura Reflow",
+            onPressed: () =>
+                setState(() => _isReadModeEnabled = !_isReadModeEnabled),
+          ),
         ],
         bottom: _showSearchBar
             ? PdfSearchBar(
@@ -349,6 +362,18 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
               );
             },
           ),
+          if (_isReadModeEnabled)
+            PdfReadModeOverlay(
+              docBytes: widget.doc.fileData!,
+              initialPage: _currentPageNotifier.value,
+              totalPages: totalPages,
+              annotations: _dbStickyNotes,
+              onPageChanged: (newPage) {
+                _currentPageNotifier.value = newPage;
+                _controller.jumpToPage(newPage);
+              },
+              onClose: () => setState(() => _isReadModeEnabled = false),
+            ),
           if (_currentSelectionDetails?.globalSelectedRegion != null)
             PdfTextSelectionToolbar(
               selectionDetails: _currentSelectionDetails!,
