@@ -124,24 +124,31 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
       final bool isDarkMode =
           _config.backgroundColor == const Color(0xFF121212);
 
-      // Structure to hold organized paragraphs
       List<List<TextWord>> paragraphs = [];
       List<TextWord> currentParagraphWords = [];
 
       double? lastLineY;
       double? lastLineHeight;
 
+      final RegExp numberedListRegex = RegExp(r'^\d+[\.\)\-]\s');
+      final RegExp bulletListRegex = RegExp(r'^([•\-\*◦]|▪|►)\s');
+
       for (int i = 0; i < lines.length; i++) {
         final TextLine currentLine = lines[i];
         final double currentY = currentLine.bounds.top;
         final double currentHeight = currentLine.bounds.height;
 
+        final String lineText = currentLine.text.trimLeft();
+
+        bool isNewListElement =
+            numberedListRegex.hasMatch(lineText) ||
+            bulletListRegex.hasMatch(lineText);
+
         if (lastLineY != null && lastLineHeight != null) {
           double lineGap = currentY - (lastLineY + lastLineHeight);
 
-          // If the gap between lines is significantly wider than standard line heights,
-          // or if the current line has a sudden massive indentation change, treat it as a paragraph jump.
           if (lineGap > currentHeight * 0.85 ||
+              isNewListElement ||
               currentLine.wordCollection.isEmpty) {
             if (currentParagraphWords.isNotEmpty) {
               paragraphs.add(List.from(currentParagraphWords));
@@ -155,12 +162,10 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
         lastLineHeight = currentHeight;
       }
 
-      // Catch final paragraph block
       if (currentParagraphWords.isNotEmpty) {
         paragraphs.add(currentParagraphWords);
       }
 
-      // Build out the UI RichText representations per Paragraph block
       for (
         var paragraphIndex = 0;
         paragraphIndex < paragraphs.length;
@@ -173,7 +178,6 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
           TextWord word = words[w];
           String wordText = word.text;
 
-          // Standardize handling of structural hyphens split across line extractions
           bool endsWithHyphen = wordText.endsWith('-');
 
           Color textColor = isDarkMode ? Colors.white70 : Colors.black87;
@@ -188,7 +192,6 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
             style = FontStyle.italic;
           }
 
-          // Annotation checks
           for (var annotation in pageAnnotations) {
             if (annotation.content != null &&
                 wordText.contains(annotation.content!)) {
@@ -206,7 +209,6 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
             }
           }
 
-          // If word was broken naturally by a PDF line break, join it instead of double spacing
           String spacing = endsWithHyphen ? "" : " ";
 
           paragraphSpans.add(
@@ -223,13 +225,24 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
           );
         }
 
-        // Add the paragraph to our layout with localized text alignment control via WidgetSpan
+        String blockText = words.map((w) => w.text).join(" ").trimLeft();
+        bool isListBlock =
+            numberedListRegex.hasMatch(blockText) ||
+            bulletListRegex.hasMatch(blockText);
+
         spans.add(
           WidgetSpan(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
+              padding: EdgeInsets.only(
+                bottom: isListBlock
+                    ? 8.0
+                    : 16.0,
+                left: isListBlock
+                    ? 12.0
+                    : 0.0,
+              ),
               child: RichText(
-                textAlign: TextAlign.justify,
+                textAlign: isListBlock ? TextAlign.left : TextAlign.justify,
                 text: TextSpan(
                   children: paragraphSpans,
                   style: TextStyle(
@@ -293,7 +306,6 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              // Use Text.rich to correctly parse our grouped Paragraph WidgetSpans
                               Text.rich(TextSpan(children: inlineElements)),
                             ],
                           ),
@@ -321,7 +333,7 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
           IconButton(
             icon: Icon(Icons.text_decrease, color: _config.textColor),
             onPressed: () => setState(() {
-              _pageCache.clear(); // Clear cache so styles regenerate
+              _pageCache.clear();
               _config = _config.copyWith(
                 fontSize: (_config.fontSize - 1).clamp(12.0, 32.0),
               );
@@ -330,7 +342,7 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
           IconButton(
             icon: Icon(Icons.text_increase, color: _config.textColor),
             onPressed: () => setState(() {
-              _pageCache.clear(); // Clear cache so styles regenerate
+              _pageCache.clear();
               _config = _config.copyWith(
                 fontSize: (_config.fontSize + 1).clamp(12.0, 32.0),
               );
@@ -340,7 +352,7 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
             icon: Icon(Icons.format_line_spacing, color: _config.textColor),
             onPressed: () {
               setState(() {
-                _pageCache.clear(); // Clear cache so spacing regenerates
+                _pageCache.clear();
                 double nextSpacing = _config.lineSpacing == 1.2
                     ? 1.6
                     : (_config.lineSpacing == 1.6 ? 2.2 : 1.2);
