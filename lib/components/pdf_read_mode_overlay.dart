@@ -8,7 +8,7 @@ class PdfReadModeOverlay extends StatefulWidget {
   final int initialPage;
   final int totalPages;
   final List<AnnotationData> annotations;
-  final ValueChanged<int> onPageChanged; // Notifies main app on dynamic scrolls
+  final ValueChanged<int> onPageChanged;
   final VoidCallback onClose;
 
   const PdfReadModeOverlay({
@@ -28,10 +28,10 @@ class PdfReadModeOverlay extends StatefulWidget {
 class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
   final ScrollController _scrollController = ScrollController();
   ReadModeConfig _config = const ReadModeConfig();
-  
+
   final Map<int, List<TextSpan>> _pageCache = <int, List<TextSpan>>{};
   final Map<int, GlobalKey> _pageKeys = <int, GlobalKey>{};
-  
+
   bool _isInitLoading = true;
   late PdfDocument _pdfDocument;
 
@@ -44,15 +44,13 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
   void _initializePdfAndScroll() {
     try {
       _pdfDocument = PdfDocument(inputBytes: widget.docBytes);
-      
-      // Generate unique structural tracking keys for every single page in the doc
+
       for (int i = 0; i < widget.totalPages; i++) {
         _pageKeys[i] = GlobalKey();
       }
 
       setState(() => _isInitLoading = false);
 
-      // Instantly jump to the user's active page coordinate context right after rendering
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToPage(widget.initialPage - 1);
         _scrollController.addListener(_onScrollListener);
@@ -70,16 +68,15 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
     super.dispose();
   }
 
-  // Dynamic calculation to identify which page element is currently visible on screen
   void _onScrollListener() {
     for (int i = 0; i < widget.totalPages; i++) {
       final context = _pageKeys[i]?.currentContext;
       if (context != null) {
         final RenderBox box = context.findRenderObject() as RenderBox;
         final position = box.localToGlobal(Offset.zero);
-        
-        // If the top boundary of a text container spans into view, fire parent sync
-        if (position.dy >= 0 && position.dy < MediaQuery.of(context).size.height / 3) {
+
+        if (position.dy >= 0 &&
+            position.dy < MediaQuery.of(context).size.height / 3) {
           widget.onPageChanged(i + 1);
           break;
         }
@@ -105,52 +102,75 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
 
     List<TextSpan> spans = [];
     try {
-      final List<TextLine> lines = PdfTextExtractor(_pdfDocument).extractTextLines(
-        startPageIndex: pageIndex,
-        endPageIndex: pageIndex,
-      );
+      final List<TextLine> lines = PdfTextExtractor(
+        _pdfDocument,
+      ).extractTextLines(startPageIndex: pageIndex, endPageIndex: pageIndex);
 
       final pageNum = pageIndex + 1;
-      final pageAnnotations = widget.annotations.where((a) => a.page == pageNum).toList();
+      final pageAnnotations = widget.annotations
+          .where((a) => a.page == pageNum)
+          .toList();
+
+      final bool isDarkMode = _config.backgroundColor == const Color(0xFF121212);
 
       for (TextLine line in lines) {
-        String lineText = line.text;
-        Color textColor = _config.textColor;
-        FontWeight weight = FontWeight.normal;
-        TextDecoration decoration = TextDecoration.none;
+        for (TextWord word in line.wordCollection) {
+          String wordText = word.text;
 
-        for (var annotation in pageAnnotations) {
-          if (annotation.content != null && lineText.contains(annotation.content!)) {
-            if (annotation.type == 'highlight') {
-              textColor = _config.backgroundColor == const Color(0xFF121212) 
-                  ? Colors.amberAccent 
-                  : const Color(0xFFB38F00); 
-              weight = FontWeight.bold;
-            } else if (annotation.type == 'underline') {
-              textColor = Colors.red;
-              decoration = TextDecoration.underline;
-            } else if (annotation.type == 'note') {
-              textColor = Colors.blue;
+          Color textColor = isDarkMode ? Colors.white70 : Colors.black87;
+          TextDecoration decoration = TextDecoration.none;
+
+          FontWeight weight = FontWeight.normal;
+          FontStyle style = FontStyle.normal;
+
+          if (word.fontStyle.contains(PdfFontStyle.bold)) {
+            weight = FontWeight.bold;
+          }
+          if (word.fontStyle.contains(PdfFontStyle.italic)) {
+            style = FontStyle.italic;
+          }
+
+          for (var annotation in pageAnnotations) {
+            if (annotation.content != null &&
+                wordText.contains(annotation.content!)) {
+              if (annotation.type == 'highlight') {
+                textColor = isDarkMode
+                    ? Colors.amberAccent
+                    : const Color(0xFFB38F00);
+                weight = FontWeight.bold;
+              } else if (annotation.type == 'underline') {
+                textColor = Colors.red;
+                decoration = TextDecoration.underline;
+              } else if (annotation.type == 'note') {
+                textColor = Colors.blue;
+              }
             }
           }
+
+          spans.add(
+            TextSpan(
+              text: "$wordText ",
+              style: TextStyle(
+                color: textColor,
+                fontWeight: weight,
+                fontStyle: style,
+                decoration: decoration,
+                decorationColor: textColor,
+              ),
+            ),
+          );
         }
 
-        spans.add(TextSpan(
-          text: "$lineText\n",
-          style: TextStyle(
-            color: textColor,
-            fontWeight: weight,
-            decoration: decoration,
-            decorationColor: textColor,
-          ),
-        ));
+        spans.add(const TextSpan(text: "\n"));
       }
 
       if (spans.isEmpty) {
-        spans.add(TextSpan(
-          text: "Esta página não possui texto extraível.\n",
-          style: TextStyle(color: _config.textColor.withOpacity(0.5)),
-        ));
+        spans.add(
+          TextSpan(
+            text: "Esta página não possui texto extraível.\n",
+            style: TextStyle(color: Colors.grey.shade500),
+          ),
+        );
       }
     } catch (e) {
       spans.add(TextSpan(text: "Erro ao extrair texto da página: $e\n"));
@@ -174,16 +194,19 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
                   : ListView.builder(
                       controller: _scrollController,
                       itemCount: widget.totalPages,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       itemBuilder: (context, index) {
                         final textSpans = _getStyledPageText(index);
                         return Container(
-                          key: _pageKeys[index], // Assigned global mapping keys for element calculations
+                          key:
+                              _pageKeys[index],
                           padding: const EdgeInsets.only(bottom: 32.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Visual separator between pages
                               Text(
                                 "--- PÁGINA ${index + 1} ---",
                                 style: TextStyle(
@@ -228,17 +251,27 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
           ),
           IconButton(
             icon: Icon(Icons.text_decrease, color: _config.textColor),
-            onPressed: () => setState(() => _config = _config.copyWith(fontSize: (_config.fontSize - 1).clamp(12.0, 32.0))),
+            onPressed: () => setState(
+              () => _config = _config.copyWith(
+                fontSize: (_config.fontSize - 1).clamp(12.0, 32.0),
+              ),
+            ),
           ),
           IconButton(
             icon: Icon(Icons.text_increase, color: _config.textColor),
-            onPressed: () => setState(() => _config = _config.copyWith(fontSize: (_config.fontSize + 1).clamp(12.0, 32.0))),
+            onPressed: () => setState(
+              () => _config = _config.copyWith(
+                fontSize: (_config.fontSize + 1).clamp(12.0, 32.0),
+              ),
+            ),
           ),
           IconButton(
             icon: Icon(Icons.format_line_spacing, color: _config.textColor),
             onPressed: () {
               setState(() {
-                double nextSpacing = _config.lineSpacing == 1.2 ? 1.6 : (_config.lineSpacing == 1.6 ? 2.2 : 1.2);
+                double nextSpacing = _config.lineSpacing == 1.2
+                    ? 1.6
+                    : (_config.lineSpacing == 1.6 ? 2.2 : 1.2);
                 _config = _config.copyWith(lineSpacing: nextSpacing);
               });
             },
@@ -247,13 +280,17 @@ class _PdfReadModeOverlayState extends State<PdfReadModeOverlay> {
             icon: Icon(Icons.palette, color: _config.textColor),
             onPressed: () {
               setState(() {
-                _pageCache.clear(); 
-                if (_config.backgroundColor == const Color(0xFFFBF0D9)) {
-                  _config = _config.copyWith(backgroundColor: Colors.white, textColor: Colors.black87);
-                } else if (_config.backgroundColor == Colors.white) {
-                  _config = _config.copyWith(backgroundColor: const Color(0xFF121212), textColor: Colors.white70);
-                } else {
-                  _config = _config.copyWith(backgroundColor: const Color(0xFFFBF0D9), textColor: const Color(0xFF5B4636));
+                _pageCache.clear();
+                if (_config.backgroundColor == const Color(0xFF121212)) {
+                  _config = _config.copyWith(
+                    backgroundColor: Colors.white,
+                    textColor: Colors.black87,
+                  );
+                } else{
+                  _config = _config.copyWith(
+                    backgroundColor: const Color(0xFF121212),
+                    textColor: Colors.white70,
+                  );
                 }
               });
             },

@@ -5,22 +5,34 @@ import '../tables/category.dart';
 
 part 'document_dao.g.dart';
 
+enum DocumentSortOption { lastAccess, name }
+
 @DriftAccessor(tables: [Document, Category])
 class DocumentDao extends DatabaseAccessor<AppDatabase>
     with _$DocumentDaoMixin {
   DocumentDao(AppDatabase db) : super(db);
 
-  Stream<List<TypedResult>> watchDocumentsWithCategory({int? categoryId}) {
-  final query = select(document).join([
-    innerJoin(category, category.id.equalsExp(document.categoryId)),
-  ]);
+  Stream<List<TypedResult>> watchDocumentsWithCategory({
+    int? categoryId,
+    DocumentSortOption sortBy = DocumentSortOption.lastAccess,
+  }) {
+    final query = select(
+      document,
+    ).join([innerJoin(category, category.id.equalsExp(document.categoryId))]);
 
-  if (categoryId != null) {
-    query.where(document.categoryId.equals(categoryId));
+    if (categoryId != null) {
+      query.where(document.categoryId.equals(categoryId));
+    }
+
+    query.orderBy([
+      if (sortBy == DocumentSortOption.name)
+        OrderingTerm.asc(document.name)
+      else
+        OrderingTerm.desc(document.lastAccess),
+    ]);
+
+    return query.watch();
   }
-
-  return query.watch();
-}
 
   Future<int> deleteDocument(int docId) {
     return (delete(document)..where((t) => t.id.equals(docId))).go();

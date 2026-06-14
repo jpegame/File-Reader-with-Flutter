@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' show TypedResult;
 import 'pdf_view_page.dart';
 import 'package:intl/intl.dart';
 import '../database/app_database.dart';
+import '../database/daos/document_dao.dart' show DocumentSortOption;
 
 class HomePage extends StatefulWidget {
   final AppDatabase db;
@@ -14,6 +15,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int? _selectedCategoryId;
+  DocumentSortOption _currentSort = DocumentSortOption.lastAccess;
   Future<List<CategoryData>>? _categoriesFuture;
 
   @override
@@ -35,14 +37,20 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: 0.75,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: _buildCategoryDropdown(categoriesFuture),
-            ),
+        Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 4,
+                child: _buildCategoryDropdown(categoriesFuture),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 3,
+                child: _buildSortDropdown(),
+              ),
+            ],
           ),
         ),
 
@@ -50,6 +58,7 @@ class _HomePageState extends State<HomePage> {
           child: StreamBuilder<List<TypedResult>>(
             stream: widget.db.documentDao.watchDocumentsWithCategory(
               categoryId: _selectedCategoryId,
+              sortBy: _currentSort,
             ),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -153,7 +162,7 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      "Acessado em: ${DateFormat('dd/MM/yyyy').format(doc.lastAccess.toLocal())}",
+                                      "Acessado em: ${DateFormat('dd/MM/yyyy HH:mm').format(doc.lastAccess.toLocal())}",
                                       style: const TextStyle(
                                         fontSize: 10,
                                         color: Colors.grey,
@@ -244,8 +253,10 @@ class _HomePageState extends State<HomePage> {
         if (!snapshot.hasData) {
           return DropdownButtonFormField<int?>(
             decoration: InputDecoration(
-              labelText: "Filtrar por Categoria",
-              border: OutlineInputBorder(),
+              labelText: "Categoria",
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             items: [],
             onChanged: null,
@@ -256,8 +267,9 @@ class _HomePageState extends State<HomePage> {
 
         return DropdownButtonFormField<int?>(
           value: _selectedCategoryId,
+          isExpanded: true,
           decoration: InputDecoration(
-            labelText: "Filtrar por Categoria",
+            labelText: "Categoria",
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 8,
@@ -265,14 +277,11 @@ class _HomePageState extends State<HomePage> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text("Todos os Documentos"),
-            ),
+            const DropdownMenuItem<int?>(value: null, child: Text("Todos")),
             ...categories.map((category) {
               return DropdownMenuItem<int?>(
                 value: category.id,
-                child: Text(category.name),
+                child: Text(category.name, overflow: TextOverflow.ellipsis),
               );
             }),
           ],
@@ -282,6 +291,35 @@ class _HomePageState extends State<HomePage> {
             });
           },
         );
+      },
+    );
+  }
+
+  Widget _buildSortDropdown() {
+    return DropdownButtonFormField<DocumentSortOption>(
+      value: _currentSort,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: "Ordenar por",
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      items: const [
+        DropdownMenuItem(
+          value: DocumentSortOption.lastAccess,
+          child: Text("Mais Recente", overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: DocumentSortOption.name,
+          child: Text("Nome (A-Z)", overflow: TextOverflow.ellipsis),
+        ),
+      ],
+      onChanged: (newValue) {
+        if (newValue != null) {
+          setState(() {
+            _currentSort = newValue;
+          });
+        }
       },
     );
   }
