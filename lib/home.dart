@@ -42,7 +42,7 @@ class _HomePageState extends State<HomePage> {
           child: Row(
             children: [
               Expanded(
-                flex: 4,
+                flex: 3,
                 child: _buildCategoryDropdown(categoriesFuture),
               ),
               const SizedBox(width: 10),

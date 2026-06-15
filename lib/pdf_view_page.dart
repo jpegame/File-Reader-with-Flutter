@@ -405,20 +405,92 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
             right: 16,
             child: ValueListenableBuilder<int>(
               valueListenable: _currentPageNotifier,
-              builder: (context, pageValue, _) => Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(0, 0, 0, 0.6),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  "$pageValue / $totalPages",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+              builder: (context, pageValue, _) => GestureDetector(
+                onTap: () async {
+                  final int? targetPage = await showDialog<int>(
+                    context: context,
+                    builder: (context) {
+                      final pageController = TextEditingController(
+                        text: pageValue.toString(),
+                      );
+                      final formKey = GlobalKey<FormState>();
+
+                      return AlertDialog(
+                        title: const Text("Ir para a página"),
+                        content: Form(
+                          key: formKey,
+                          child: TextFormField(
+                            controller: pageController,
+                            autofocus: true,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              hintText:
+                                  "Digite uma página entre 1 e $totalPages",
+                              suffixText: "/ $totalPages",
+                              border: const OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Digite um número";
+                              }
+                              final parsed = int.tryParse(value);
+                              if (parsed == null ||
+                                  parsed < 1 ||
+                                  parsed > totalPages) {
+                                return "Página inválida";
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("Cancelar"),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (formKey.currentState!.validate()) {
+                                Navigator.pop(
+                                  context,
+                                  int.parse(pageController.text),
+                                );
+                              }
+                            },
+                            child: const Text("Ir"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  // If a valid page was returned, command the controller to jump
+                  if (targetPage != null) {
+                    _controller.jumpToPage(targetPage);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(0, 0, 0, 0.6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.edit, color: Colors.white70, size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        "$pageValue / $totalPages",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
