@@ -37,7 +37,11 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
   bool _showSearchBar = false;
   bool _isInitialJumpDone = false;
   bool _isCommentModeEnabled = false;
+
+  // Layout states transferred and managed via settings
   bool _isReadModeEnabled = false;
+  PdfPageLayoutMode _pageLayoutMode = PdfPageLayoutMode.continuous;
+  PdfScrollDirection _scrollDirection = PdfScrollDirection.vertical;
 
   PdfTextSelectionChangedDetails? _currentSelectionDetails;
   List<AnnotationData> _dbStickyNotes = [];
@@ -266,6 +270,92 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
     await _loadAllAnnotations();
   }
 
+  void _showSettingsModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter modalSetState) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 20.0,
+                horizontal: 16.0,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Opções de Visualização',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Continuous Vertical Scroll
+                  ListTile(
+                    leading: const Icon(Icons.swap_vert),
+                    title: const Text('Rolagem Vertical Contínua'),
+                    selected:
+                        _pageLayoutMode == PdfPageLayoutMode.continuous &&
+                        _scrollDirection == PdfScrollDirection.vertical &&
+                        !_isReadModeEnabled,
+                    onTap: () {
+                      setState(() {
+                        _isReadModeEnabled = false;
+                        _pageLayoutMode = PdfPageLayoutMode.continuous;
+                        _scrollDirection = PdfScrollDirection.vertical;
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+
+                  // Horizontal Single Page (Kindle style)
+                  ListTile(
+                    leading: const Icon(Icons.swap_horiz),
+                    title: const Text('Rolagem Horizontal (Estilo Kindle)'),
+                    selected:
+                        _pageLayoutMode == PdfPageLayoutMode.single &&
+                        _scrollDirection == PdfScrollDirection.horizontal &&
+                        !_isReadModeEnabled,
+                    onTap: () {
+                      setState(() {
+                        _isReadModeEnabled = false;
+                        _pageLayoutMode = PdfPageLayoutMode.single;
+                        _scrollDirection = PdfScrollDirection.horizontal;
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+
+                  const Divider(),
+
+                  // Transferred Read Mode Switch
+                  SwitchListTile(
+                    secondary: const Icon(Icons.chrome_reader_mode),
+                    title: const Text('Modo Leitura'),
+                    subtitle: const Text(
+                      'Exibe o texto adaptado para telas mobile',
+                    ),
+                    value: _isReadModeEnabled,
+                    onChanged: (bool value) {
+                      setState(() {
+                        _isReadModeEnabled = value;
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -291,21 +381,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                 ),
               );
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => setState(() => _showSearchBar = !_showSearchBar),
-          ),
-          IconButton(
-            icon: Icon(
-              _isReadModeEnabled
-                  ? Icons.chrome_reader_mode
-                  : Icons.chrome_reader_mode_outlined,
-              color: _isReadModeEnabled ? Colors.greenAccent : null,
-            ),
-            tooltip: "Modo Leitura Reflow",
-            onPressed: () =>
-                setState(() => _isReadModeEnabled = !_isReadModeEnabled),
           ),
         ],
         bottom: _showSearchBar
@@ -347,7 +422,9 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
               0,
               0.35,
             ),
-            pageLayoutMode: PdfPageLayoutMode.continuous,
+            // Dynamic assignments controlled from modal parameters
+            pageLayoutMode: _pageLayoutMode,
+            scrollDirection: _scrollDirection,
             onDocumentLoaded: (d) {
               setState(() => totalPages = d.document.pages.count);
               _handleInitialJump();
@@ -394,7 +471,8 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                 FloatingActionButton(
                   heroTag: "settings_fab",
                   mini: true,
-                  onPressed: () => debugPrint("Settings clicked"),
+                  onPressed:
+                      _showSettingsModal, // Triggers custom layout configurations
                   child: const Icon(Icons.settings),
                 ),
               ],
@@ -463,8 +541,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                       );
                     },
                   );
-
-                  // If a valid page was returned, command the controller to jump
                   if (targetPage != null) {
                     _controller.jumpToPage(targetPage);
                   }
