@@ -38,12 +38,12 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
   bool _isInitialJumpDone = false;
   bool _isCommentModeEnabled = false;
 
-  // Layout states transferred and managed via settings
   bool _isReadModeEnabled = false;
   PdfPageLayoutMode _pageLayoutMode = PdfPageLayoutMode.continuous;
   PdfScrollDirection _scrollDirection = PdfScrollDirection.vertical;
 
   PdfTextSelectionChangedDetails? _currentSelectionDetails;
+  List<AnnotationData> _allAnnotations = [];
   List<AnnotationData> _dbStickyNotes = [];
 
   @override
@@ -75,6 +75,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
       );
 
       setState(() {
+        _allAnnotations = annotations;
         _dbStickyNotes = annotations
             .where((element) => element.type == 'sticky_note')
             .toList();
@@ -270,6 +271,89 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
     await _loadAllAnnotations();
   }
 
+  void _showAnnotationsMenu() {
+    final Map<String, List<AnnotationData>> grouped = {};
+    for (var note in _allAnnotations) {
+      grouped.putIfAbsent(note.type, () => []).add(note);
+    }
+
+    final Map<String, Map<String, dynamic>> typeConfig = {
+      'sticky_note': {'label': 'Notas Adesivas', 'icon': Icons.speaker_notes},
+      'highlight': {
+        'label': 'Destaques (Highlights)',
+        'icon': Icons.border_color,
+      },
+      'underline': {'label': 'Sublinhados', 'icon': Icons.format_underlined},
+    };
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 20.0, left: 16.0, right: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Anotações do Documento',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: grouped.isEmpty
+                    ? const Center(child: Text("Nenhuma anotação encontrada."))
+                    : ListView(
+                        children: grouped.entries.map((entry) {
+                          final config =
+                              typeConfig[entry.key] ??
+                              {
+                                'label': entry.key.toUpperCase(),
+                                'icon': Icons.bookmark_border,
+                              };
+
+                          return ExpansionTile(
+                            leading: Icon(config['icon'] as IconData),
+                            title: Text(
+                              "${config['label']} (${entry.value.length})",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            children: entry.value.map((annotation) {
+                              return ListTile(
+                                dense: true,
+                                title: Text(
+                                  annotation.content ?? '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text("Página ${annotation.page}"),
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  size: 16,
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _controller.jumpToPage(
+                                    annotation.page,
+                                  );
+                                },
+                              );
+                            }).toList(),
+                          );
+                        }).toList(),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showSettingsModal() {
     showModalBottomSheet(
       context: context,
@@ -294,7 +378,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                   ),
                   const SizedBox(height: 16),
 
-                  // Continuous Vertical Scroll
                   ListTile(
                     leading: const Icon(Icons.swap_vert),
                     title: const Text('Rolagem Vertical Contínua'),
@@ -312,7 +395,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                     },
                   ),
 
-                  // Horizontal Single Page (Kindle style)
                   ListTile(
                     leading: const Icon(Icons.swap_horiz),
                     title: const Text('Rolagem Horizontal (Estilo Kindle)'),
@@ -332,7 +414,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
 
                   const Divider(),
 
-                  // Transferred Read Mode Switch
                   SwitchListTile(
                     secondary: const Icon(Icons.chrome_reader_mode),
                     title: const Text('Modo Leitura'),
@@ -362,6 +443,11 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
       appBar: AppBar(
         title: Text(widget.doc.name),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.collections_bookmark),
+            tooltip: "Ver todas as anotações",
+            onPressed: _showAnnotationsMenu,
+          ),
           IconButton(
             icon: Icon(
               Icons.note_add,
@@ -422,7 +508,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
               0,
               0.35,
             ),
-            // Dynamic assignments controlled from modal parameters
             pageLayoutMode: _pageLayoutMode,
             scrollDirection: _scrollDirection,
             onDocumentLoaded: (d) {
@@ -471,8 +556,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                 FloatingActionButton(
                   heroTag: "settings_fab",
                   mini: true,
-                  onPressed:
-                      _showSettingsModal, // Triggers custom layout configurations
+                  onPressed: _showSettingsModal,
                   child: const Icon(Icons.settings),
                 ),
               ],
@@ -503,7 +587,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
                               hintText:
-                                  "Digite uma página entre 1 e $totalPages",
+                                  "Digite uma página entre 1 and $totalPages",
                               suffixText: "/ $totalPages",
                               border: const OutlineInputBorder(),
                             ),
