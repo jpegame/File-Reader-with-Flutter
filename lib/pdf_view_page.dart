@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart' as pdf_core;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/drift.dart' as drift;
 
@@ -37,7 +38,9 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
   bool _showSearchBar = false;
   bool _isInitialJumpDone = false;
   bool _isCommentModeEnabled = false;
+  bool _isGeneratingSummary = false;
 
+  // Layout states transferred and managed via settings
   bool _isReadModeEnabled = false;
   PdfPageLayoutMode _pageLayoutMode = PdfPageLayoutMode.continuous;
   PdfScrollDirection _scrollDirection = PdfScrollDirection.vertical;
@@ -46,9 +49,13 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
   List<AnnotationData> _allAnnotations = [];
   List<AnnotationData> _dbStickyNotes = [];
 
+  // Summary storage: Empty at start, cached after manual initialization
+  List<Map<String, dynamic>> _autoSummaryItems = [];
+
   @override
   void initState() {
     super.initState();
+    // Keep database queries lightweight; annotations load asynchronously
     _loadAllAnnotations();
   }
 
@@ -83,6 +90,304 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
     } catch (e) {
       debugPrint("Error loading annotations: $e");
     }
+  }
+
+  // Pure on-demand heavy calculation engine - Optimized with Spatial/Coordinate awareness
+  Future<void> _generateAutoSummary(StateSetter modalSetState) async {
+    if (_autoSummaryItems.isNotEmpty) return;
+
+    modalSetState(() => _isGeneratingSummary = true);
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final pdf_core.PdfDocument document = pdf_core.PdfDocument(
+        inputBytes: widget.doc.fileData!,
+      );
+      final pdf_core.PdfTextExtractor extractor = pdf_core.PdfTextExtractor(
+        document,
+      );
+
+      List<Map<String, dynamic>> items = [];
+
+      // Regex patterns for structural filtering
+      final RegExp titleCaseRegex = RegExp(r'^[A-Z0-9À-Ú]');
+      final RegExp standaloneNumberRegex = RegExp(r'^\d+$');
+      // Matches pagination indicators like "Page 1", "Pág. 24", "12 | Chapter", etc.
+      final RegExp paginationInlineRegex = RegExp(
+        r'(\b(pág|pag|page|página)\b\.?\s*\d+)|(^\d+\s*[\s|•\|\-\/])|([\s|•\|\-\/]\s*\d+$)',
+      );
+
+      for (int i = 0; i < document.pages.count; i++) {
+        final List<pdf_core.TextLine> pageLines = extractor.extractTextLines(
+          startPageIndex: i,
+          endPageIndex: i,
+        );
+
+        String? foundHeading;
+
+        // Determine dynamic vertical thresholds based on the page bounds if lines exist
+        double pageHeightThreshold = 800.0; // Fallback default height
+        if (pageLines.isNotEmpty) {
+          // Find the lowest coordinate on the page to estimate the actual document height
+          pageHeightThreshold = pageLines
+              .map((e) => e.bounds.bottom)
+              .reduce((a, b) => a > b ? a : b);
+        }
+
+        // Top Header zone boundary (typically upper 8-10% of the document canvas)
+        final double headerZoneLimit = pageHeightThreshold * 0.10;
+        // Bottom Footer zone boundary (typically lower 8-10% of the document canvas)
+        final double footerZoneLimit = pageHeightThreshold * 0.90;
+
+        for (var line in pageLines) {
+          final String cleanedText = line.text.trim();
+          final double lineTop = line.bounds.top;
+          final double lineLeft = line.bounds.left;
+
+          if (cleanedText.length < 3) continue;
+
+          // --- RULE 1: PAGINATION & MARGIN NOISE FILTERING ---
+          // A: Skip standard standalone page number fragments
+          if (standaloneNumberRegex.hasMatch(cleanedText)) continue;
+
+          // B: Skip if the text contains a pagination signature pattern (e.g., "12 | Intro")
+          if (paginationInlineRegex.hasMatch(cleanedText)) continue;
+
+          // C: Strict filtering inside Header/Footer boundaries
+          if (lineTop < headerZoneLimit || lineTop > footerZoneLimit) {
+            // Real titles rarely sit inside the structural running header zone.
+            // If it's up there mixed with potential page numbering contexts, discard.
+            continue;
+          }
+
+          // --- RULE 2: ALIGNMENT & STRUCTURAL VERIFICATION ---
+          // Genuine titles are conventionally left-aligned or centered.
+          // If a short string fragment is pushed heavily to the top right, it's metadata, not a title.
+          // Assuming a standard page width approximation of ~600pt, anything past 420pt left is ignored.
+          if (lineLeft > 420.0) continue;
+
+          // --- RULE 3: VISUAL STYLING CHECKS ---
+          bool isBold = false;
+          if (line.wordCollection.isNotEmpty) {
+            final firstWordStyle = line.wordCollection.first.fontStyle;
+            isBold = firstWordStyle.contains(pdf_core.PdfFontStyle.bold);
+          }
+
+          bool isTitleStyle = titleCaseRegex.hasMatch(cleanedText);
+
+          // Must be a standalone structural block line (no sentence ending periods)
+          bool isStandaloneLine =
+              line.wordCollection.length < 12 && !cleanedText.endsWith('.');
+
+          if ((isBold || isTitleStyle) && isStandaloneLine) {
+            foundHeading = cleanedText;
+            if (foundHeading.length > 60) {
+              foundHeading = "${foundHeading.substring(0, 57)}...";
+            }
+            break; // Anchor identified for this page; proceed to next page
+          }
+        }
+
+        items.add({
+          'pageNumber': i + 1,
+          'heading': foundHeading ?? "Página ${i + 1} (Conteúdo contínuo)",
+        });
+      }
+
+      document.dispose();
+
+      modalSetState(() {
+        _autoSummaryItems = items;
+        _isGeneratingSummary = false;
+      });
+      setState(() {});
+    } catch (e) {
+      debugPrint("Error creating auto summary extraction: $e");
+      modalSetState(() => _isGeneratingSummary = false);
+    }
+  }
+
+  void _showSummaryMenu() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        // StatefulBuilder allows live progress indicator updates without rebuilding the whole underlying PDF page view
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            // Automatically triggers computation only when the modal is requested
+            if (_autoSummaryItems.isEmpty && !_isGeneratingSummary) {
+              _generateAutoSummary(setModalState);
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(
+                top: 20.0,
+                left: 16.0,
+                right: 16.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Sumário Automático (Estrutura)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Principais âncoras de texto identificadas por página:',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: _isGeneratingSummary
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: 12),
+                                Text(
+                                  "Analisando estrutura do PDF sob demanda...",
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: _autoSummaryItems.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final item = _autoSummaryItems[index];
+                              final int pageNum = item['pageNumber'];
+
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).primaryColor.withOpacity(0.1),
+                                  child: Text(
+                                    "$pageNum",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(context).primaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  item['heading'],
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: const Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 14,
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _controller.jumpToPage(pageNum);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAnnotationsMenu() {
+    final Map<String, List<AnnotationData>> grouped = {};
+    for (var note in _allAnnotations) {
+      grouped.putIfAbsent(note.type, () => []).add(note);
+    }
+
+    final Map<String, Map<String, dynamic>> typeConfig = {
+      'sticky_note': {'label': 'Notas Adesivas', 'icon': Icons.speaker_notes},
+      'highlight': {
+        'label': 'Destaques (Highlights)',
+        'icon': Icons.border_color,
+      },
+      'underline': {'label': 'Sublinhados', 'icon': Icons.format_underlined},
+    };
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 20.0, left: 16.0, right: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Anotações do Documento',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: grouped.isEmpty
+                    ? const Center(child: Text("Nenhuma anotação encontrada."))
+                    : ListView(
+                        children: grouped.entries.map((entry) {
+                          final config =
+                              typeConfig[entry.key] ??
+                              {
+                                'label': entry.key.toUpperCase(),
+                                'icon': Icons.bookmark_border,
+                              };
+
+                          return ExpansionTile(
+                            leading: Icon(config['icon'] as IconData),
+                            title: Text(
+                              "${config['label']} (${entry.value.length})",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            children: entry.value.map((annotation) {
+                              return ListTile(
+                                dense: true,
+                                title: Text(
+                                  annotation.content ?? '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text("Página ${annotation.page}"),
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  size: 16,
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _controller.jumpToPage(annotation.page);
+                                },
+                              );
+                            }).toList(),
+                          );
+                        }).toList(),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _handlePageTap(PdfGestureDetails details) async {
@@ -271,89 +576,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
     await _loadAllAnnotations();
   }
 
-  void _showAnnotationsMenu() {
-    final Map<String, List<AnnotationData>> grouped = {};
-    for (var note in _allAnnotations) {
-      grouped.putIfAbsent(note.type, () => []).add(note);
-    }
-
-    final Map<String, Map<String, dynamic>> typeConfig = {
-      'sticky_note': {'label': 'Notas Adesivas', 'icon': Icons.speaker_notes},
-      'highlight': {
-        'label': 'Destaques (Highlights)',
-        'icon': Icons.border_color,
-      },
-      'underline': {'label': 'Sublinhados', 'icon': Icons.format_underlined},
-    };
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.only(top: 20.0, left: 16.0, right: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Anotações do Documento',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: grouped.isEmpty
-                    ? const Center(child: Text("Nenhuma anotação encontrada."))
-                    : ListView(
-                        children: grouped.entries.map((entry) {
-                          final config =
-                              typeConfig[entry.key] ??
-                              {
-                                'label': entry.key.toUpperCase(),
-                                'icon': Icons.bookmark_border,
-                              };
-
-                          return ExpansionTile(
-                            leading: Icon(config['icon'] as IconData),
-                            title: Text(
-                              "${config['label']} (${entry.value.length})",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            children: entry.value.map((annotation) {
-                              return ListTile(
-                                dense: true,
-                                title: Text(
-                                  annotation.content ?? '',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text("Página ${annotation.page}"),
-                                trailing: const Icon(
-                                  Icons.chevron_right,
-                                  size: 16,
-                                ),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _controller.jumpToPage(
-                                    annotation.page,
-                                  );
-                                },
-                              );
-                            }).toList(),
-                          );
-                        }).toList(),
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _showSettingsModal() {
     showModalBottomSheet(
       context: context,
@@ -377,7 +599,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
-
                   ListTile(
                     leading: const Icon(Icons.swap_vert),
                     title: const Text('Rolagem Vertical Contínua'),
@@ -394,7 +615,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                       Navigator.pop(context);
                     },
                   ),
-
                   ListTile(
                     leading: const Icon(Icons.swap_horiz),
                     title: const Text('Rolagem Horizontal (Estilo Kindle)'),
@@ -411,9 +631,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                       Navigator.pop(context);
                     },
                   ),
-
                   const Divider(),
-
                   SwitchListTile(
                     secondary: const Icon(Icons.chrome_reader_mode),
                     title: const Text('Modo Leitura'),
@@ -443,6 +661,11 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
       appBar: AppBar(
         title: Text(widget.doc.name),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.summarize),
+            tooltip: "Gerar Sumário Automático",
+            onPressed: _showSummaryMenu,
+          ),
           IconButton(
             icon: const Icon(Icons.collections_bookmark),
             tooltip: "Ver todas as anotações",
@@ -513,7 +736,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
             onDocumentLoaded: (d) {
               setState(() => totalPages = d.document.pages.count);
               _handleInitialJump();
-              _loadAllAnnotations();
+              // REMOVED automatic summary building call here to maintain lightweight rendering loop
             },
             onPageChanged: (d) {
               _currentPageNotifier.value = d.newPageNumber;
@@ -587,7 +810,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
                               hintText:
-                                  "Digite uma página entre 1 and $totalPages",
+                                  "Digite uma página entre 1 e $totalPages",
                               suffixText: "/ $totalPages",
                               border: const OutlineInputBorder(),
                             ),
