@@ -40,7 +40,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
   bool _isCommentModeEnabled = false;
   bool _isGeneratingSummary = false;
 
-  // Layout states transferred and managed via settings
   bool _isReadModeEnabled = false;
   PdfPageLayoutMode _pageLayoutMode = PdfPageLayoutMode.continuous;
   PdfScrollDirection _scrollDirection = PdfScrollDirection.vertical;
@@ -49,13 +48,11 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
   List<AnnotationData> _allAnnotations = [];
   List<AnnotationData> _dbStickyNotes = [];
 
-  // Summary storage: Empty at start, cached after manual initialization
   List<Map<String, dynamic>> _autoSummaryItems = [];
 
   @override
   void initState() {
     super.initState();
-    // Keep database queries lightweight; annotations load asynchronously
     _loadAllAnnotations();
   }
 
@@ -92,7 +89,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
     }
   }
 
-  // Pure on-demand heavy calculation engine - Optimized with Spatial/Coordinate awareness
   Future<void> _generateAutoSummary(StateSetter modalSetState) async {
     if (_autoSummaryItems.isNotEmpty) return;
 
@@ -110,10 +106,8 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
 
       List<Map<String, dynamic>> items = [];
 
-      // Regex patterns for structural filtering
       final RegExp titleCaseRegex = RegExp(r'^[A-Z0-9À-Ú]');
       final RegExp standaloneNumberRegex = RegExp(r'^\d+$');
-      // Matches pagination indicators like "Page 1", "Pág. 24", "12 | Chapter", etc.
       final RegExp paginationInlineRegex = RegExp(
         r'(\b(pág|pag|page|página)\b\.?\s*\d+)|(^\d+\s*[\s|•\|\-\/])|([\s|•\|\-\/]\s*\d+$)',
       );
@@ -126,18 +120,14 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
 
         String? foundHeading;
 
-        // Determine dynamic vertical thresholds based on the page bounds if lines exist
-        double pageHeightThreshold = 800.0; // Fallback default height
+        double pageHeightThreshold = 800.0;
         if (pageLines.isNotEmpty) {
-          // Find the lowest coordinate on the page to estimate the actual document height
           pageHeightThreshold = pageLines
               .map((e) => e.bounds.bottom)
               .reduce((a, b) => a > b ? a : b);
         }
 
-        // Top Header zone boundary (typically upper 8-10% of the document canvas)
         final double headerZoneLimit = pageHeightThreshold * 0.10;
-        // Bottom Footer zone boundary (typically lower 8-10% of the document canvas)
         final double footerZoneLimit = pageHeightThreshold * 0.90;
 
         for (var line in pageLines) {
@@ -146,28 +136,11 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
           final double lineLeft = line.bounds.left;
 
           if (cleanedText.length < 3) continue;
-
-          // --- RULE 1: PAGINATION & MARGIN NOISE FILTERING ---
-          // A: Skip standard standalone page number fragments
           if (standaloneNumberRegex.hasMatch(cleanedText)) continue;
-
-          // B: Skip if the text contains a pagination signature pattern (e.g., "12 | Intro")
           if (paginationInlineRegex.hasMatch(cleanedText)) continue;
-
-          // C: Strict filtering inside Header/Footer boundaries
-          if (lineTop < headerZoneLimit || lineTop > footerZoneLimit) {
-            // Real titles rarely sit inside the structural running header zone.
-            // If it's up there mixed with potential page numbering contexts, discard.
-            continue;
-          }
-
-          // --- RULE 2: ALIGNMENT & STRUCTURAL VERIFICATION ---
-          // Genuine titles are conventionally left-aligned or centered.
-          // If a short string fragment is pushed heavily to the top right, it's metadata, not a title.
-          // Assuming a standard page width approximation of ~600pt, anything past 420pt left is ignored.
+          if (lineTop < headerZoneLimit || lineTop > footerZoneLimit) continue;
           if (lineLeft > 420.0) continue;
 
-          // --- RULE 3: VISUAL STYLING CHECKS ---
           bool isBold = false;
           if (line.wordCollection.isNotEmpty) {
             final firstWordStyle = line.wordCollection.first.fontStyle;
@@ -176,7 +149,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
 
           bool isTitleStyle = titleCaseRegex.hasMatch(cleanedText);
 
-          // Must be a standalone structural block line (no sentence ending periods)
           bool isStandaloneLine =
               line.wordCollection.length < 12 && !cleanedText.endsWith('.');
 
@@ -185,7 +157,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
             if (foundHeading.length > 60) {
               foundHeading = "${foundHeading.substring(0, 57)}...";
             }
-            break; // Anchor identified for this page; proceed to next page
+            break;
           }
         }
 
@@ -215,10 +187,8 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        // StatefulBuilder allows live progress indicator updates without rebuilding the whole underlying PDF page view
         return StatefulBuilder(
           builder: (context, setModalState) {
-            // Automatically triggers computation only when the modal is requested
             if (_autoSummaryItems.isEmpty && !_isGeneratingSummary) {
               _generateAutoSummary(setModalState);
             }
@@ -736,7 +706,6 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
             onDocumentLoaded: (d) {
               setState(() => totalPages = d.document.pages.count);
               _handleInitialJump();
-              // REMOVED automatic summary building call here to maintain lightweight rendering loop
             },
             onPageChanged: (d) {
               _currentPageNotifier.value = d.newPageNumber;
