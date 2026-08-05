@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../database/app_database.dart';
+import 'components/cumulative_speech.dart';
 
 class ConfigPage extends StatelessWidget {
   final AppDatabase db;
@@ -38,7 +39,8 @@ class ConfigPage extends StatelessWidget {
               ),
             ],
           ),
-
+          const Divider(height: 40),
+          const CumulativeSpeechWidget(),
           const Divider(height: 40),
           ListTile(
             leading: const Icon(Icons.storage),
