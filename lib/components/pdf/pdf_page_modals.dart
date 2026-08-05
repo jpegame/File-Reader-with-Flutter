@@ -5,22 +5,32 @@ import '../../database/app_database.dart';
 import 'pdf_page_controller.dart';
 
 class PdfPageModals {
-  static void showSummaryMenu(BuildContext context, PdfPageController controller) {
+  static void showSummaryMenu(
+    BuildContext context,
+    PdfPageController controller,
+  ) {
+    // 1. Trigger summary generation BEFORE opening the sheet/during the button press
+    if (controller.autoSummaryItems.isEmpty &&
+        !controller.isGeneratingSummary) {
+      controller.generateAutoSummary();
+    }
+
+    // 2. Open the modal bottom sheet
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        if (controller.autoSummaryItems.isEmpty && !controller.isGeneratingSummary) {
-          controller.generateAutoSummary();
-        }
-
         return ListenableBuilder(
           listenable: controller,
           builder: (context, _) {
             return Padding(
-              padding: const EdgeInsets.only(top: 20.0, left: 16.0, right: 16.0),
+              padding: const EdgeInsets.only(
+                top: 20.0,
+                left: 16.0,
+                right: 16.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -42,13 +52,16 @@ class PdfPageModals {
                               children: [
                                 CircularProgressIndicator(),
                                 SizedBox(height: 12),
-                                Text("Analisando estrutura do PDF sob demanda..."),
+                                Text(
+                                  "Analisando estrutura do PDF sob demanda...",
+                                ),
                               ],
                             ),
                           )
                         : ListView.separated(
                             itemCount: controller.autoSummaryItems.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final item = controller.autoSummaryItems[index];
                               final int pageNum = item['pageNumber'];
@@ -56,7 +69,9 @@ class PdfPageModals {
                               return ListTile(
                                 leading: CircleAvatar(
                                   radius: 14,
-                                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).primaryColor.withOpacity(0.1),
                                   child: Text(
                                     "$pageNum",
                                     style: TextStyle(
@@ -68,14 +83,22 @@ class PdfPageModals {
                                 ),
                                 title: Text(
                                   item['heading'],
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                                trailing: const Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 14,
+                                ),
                                 onTap: () {
                                   Navigator.pop(context);
-                                  controller.pdfViewerController.jumpToPage(pageNum);
+                                  controller.pdfViewerController.jumpToPage(
+                                    pageNum,
+                                  );
                                 },
                               );
                             },
@@ -90,7 +113,10 @@ class PdfPageModals {
     );
   }
 
-  static void showAnnotationsMenu(BuildContext context, PdfPageController controller) {
+  static void showAnnotationsMenu(
+    BuildContext context,
+    PdfPageController controller,
+  ) {
     final Map<String, List<AnnotationData>> grouped = {};
     for (var note in controller.allAnnotations) {
       grouped.putIfAbsent(note.type, () => []).add(note);
@@ -98,7 +124,10 @@ class PdfPageModals {
 
     final Map<String, Map<String, dynamic>> typeConfig = {
       'sticky_note': {'label': 'Notas Adesivas', 'icon': Icons.speaker_notes},
-      'highlight': {'label': 'Destaques (Highlights)', 'icon': Icons.border_color},
+      'highlight': {
+        'label': 'Destaques (Highlights)',
+        'icon': Icons.border_color,
+      },
       'underline': {'label': 'Sublinhados', 'icon': Icons.format_underlined},
     };
 
@@ -123,16 +152,20 @@ class PdfPageModals {
                     ? const Center(child: Text("Nenhuma anotação encontrada."))
                     : ListView(
                         children: grouped.entries.map((entry) {
-                          final config = typeConfig[entry.key] ?? {
-                            'label': entry.key.toUpperCase(),
-                            'icon': Icons.bookmark_border,
-                          };
+                          final config =
+                              typeConfig[entry.key] ??
+                              {
+                                'label': entry.key.toUpperCase(),
+                                'icon': Icons.bookmark_border,
+                              };
 
                           return ExpansionTile(
                             leading: Icon(config['icon'] as IconData),
                             title: Text(
                               "${config['label']} (${entry.value.length})",
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             children: entry.value.map((annotation) {
                               return ListTile(
@@ -143,10 +176,15 @@ class PdfPageModals {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 subtitle: Text("Página ${annotation.page}"),
-                                trailing: const Icon(Icons.chevron_right, size: 16),
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  size: 16,
+                                ),
                                 onTap: () {
                                   Navigator.pop(context);
-                                  controller.pdfViewerController.jumpToPage(annotation.page);
+                                  controller.pdfViewerController.jumpToPage(
+                                    annotation.page,
+                                  );
                                 },
                               );
                             }).toList(),
@@ -161,7 +199,10 @@ class PdfPageModals {
     );
   }
 
-  static void showSettingsModal(BuildContext context, PdfPageController controller) {
+  static void showSettingsModal(
+    BuildContext context,
+    PdfPageController controller,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -172,7 +213,10 @@ class PdfPageModals {
           listenable: controller,
           builder: (context, _) {
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 20.0,
+                horizontal: 16.0,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,8 +229,11 @@ class PdfPageModals {
                   ListTile(
                     leading: const Icon(Icons.swap_vert),
                     title: const Text('Rolagem Vertical Contínua'),
-                    selected: controller.pageLayoutMode == PdfPageLayoutMode.continuous &&
-                        controller.scrollDirection == PdfScrollDirection.vertical &&
+                    selected:
+                        controller.pageLayoutMode ==
+                            PdfPageLayoutMode.continuous &&
+                        controller.scrollDirection ==
+                            PdfScrollDirection.vertical &&
                         !controller.isReadModeEnabled,
                     onTap: () {
                       controller.setViewLayout(
@@ -199,8 +246,10 @@ class PdfPageModals {
                   ListTile(
                     leading: const Icon(Icons.swap_horiz),
                     title: const Text('Rolagem Horizontal (Estilo Kindle)'),
-                    selected: controller.pageLayoutMode == PdfPageLayoutMode.single &&
-                        controller.scrollDirection == PdfScrollDirection.horizontal &&
+                    selected:
+                        controller.pageLayoutMode == PdfPageLayoutMode.single &&
+                        controller.scrollDirection ==
+                            PdfScrollDirection.horizontal &&
                         !controller.isReadModeEnabled,
                     onTap: () {
                       controller.setViewLayout(
@@ -214,7 +263,9 @@ class PdfPageModals {
                   SwitchListTile(
                     secondary: const Icon(Icons.chrome_reader_mode),
                     title: const Text('Modo Leitura'),
-                    subtitle: const Text('Exibe o texto adaptado para telas mobile'),
+                    subtitle: const Text(
+                      'Exibe o texto adaptado para telas mobile',
+                    ),
                     value: controller.isReadModeEnabled,
                     onChanged: (bool value) {
                       controller.setReadMode(value);
@@ -271,8 +322,12 @@ class PdfPageModals {
       try {
         final List<dynamic> rects = jsonDecode(note.rectsJson);
         if (note.page == annotation.pageNumber &&
-            ((rects[0]['left'] as num).toDouble() - annotation.position.dx).abs() < 0.1 &&
-            ((rects[0]['top'] as num).toDouble() - annotation.position.dy).abs() < 0.1) {
+            ((rects[0]['left'] as num).toDouble() - annotation.position.dx)
+                    .abs() <
+                0.1 &&
+            ((rects[0]['top'] as num).toDouble() - annotation.position.dy)
+                    .abs() <
+                0.1) {
           dbMatch = note;
           break;
         }
@@ -308,7 +363,11 @@ class PdfPageModals {
     );
   }
 
-  static Future<int?> showPageJumpDialog(BuildContext context, int currentPage, int totalPages) {
+  static Future<int?> showPageJumpDialog(
+    BuildContext context,
+    int currentPage,
+    int totalPages,
+  ) {
     final pageController = TextEditingController(text: currentPage.toString());
     final formKey = GlobalKey<FormState>();
 

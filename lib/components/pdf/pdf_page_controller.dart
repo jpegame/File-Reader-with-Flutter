@@ -15,7 +15,8 @@ class PdfPageController extends ChangeNotifier {
   final void Function(List<AnnotationData> annotations)? onApplyAnnotations;
 
   final PdfViewerController pdfViewerController = PdfViewerController();
-  final GlobalKey<SfPdfViewerState> pdfViewerKey = GlobalKey<SfPdfViewerState>();
+  final GlobalKey<SfPdfViewerState> pdfViewerKey =
+      GlobalKey<SfPdfViewerState>();
   final TextEditingController searchController = TextEditingController();
   final PdfTtsController ttsController = PdfTtsController();
 
@@ -78,7 +79,10 @@ class PdfPageController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setViewLayout({required PdfPageLayoutMode layout, required PdfScrollDirection direction}) {
+  void setViewLayout({
+    required PdfPageLayoutMode layout,
+    required PdfScrollDirection direction,
+  }) {
     isReadModeEnabled = false;
     pageLayoutMode = layout;
     scrollDirection = direction;
@@ -86,7 +90,9 @@ class PdfPageController extends ChangeNotifier {
   }
 
   void updateSelection(PdfTextSelectionChangedDetails? details) {
-    currentSelectionDetails = details?.selectedText?.trim().isEmpty ?? true ? null : details;
+    currentSelectionDetails = details?.selectedText?.trim().isEmpty ?? true
+        ? null
+        : details;
     notifyListeners();
   }
 
@@ -114,7 +120,9 @@ class PdfPageController extends ChangeNotifier {
       onApplyAnnotations?.call(annotations);
 
       allAnnotations = annotations;
-      dbStickyNotes = annotations.where((element) => element.type == 'sticky_note').toList();
+      dbStickyNotes = annotations
+          .where((element) => element.type == 'sticky_note')
+          .toList();
       notifyListeners();
     } catch (e) {
       debugPrint("Error loading annotations: $e");
@@ -148,7 +156,8 @@ class PdfPageController extends ChangeNotifier {
   Future<void> handleInitialJump() async {
     if (isInitialJumpDone) return;
     final prefs = await SharedPreferences.getInstance();
-    final int savedPage = prefs.getInt('last_page_id_${doc.id}') ?? doc.lastPage;
+    final int savedPage =
+        prefs.getInt('last_page_id_${doc.id}') ?? doc.lastPage;
 
     if (savedPage > 1) {
       Future.delayed(
@@ -166,7 +175,8 @@ class PdfPageController extends ChangeNotifier {
     List<Map<String, double>> rectsList = [];
     int targetPage = currentPage;
 
-    final List<PdfTextLine>? selectedLines = pdfViewerKey.currentState?.getSelectedTextLines();
+    final List<PdfTextLine>? selectedLines = pdfViewerKey.currentState
+        ?.getSelectedTextLines();
     currentSelectionDetails = null;
 
     if (selectedLines != null && selectedLines.isNotEmpty) {
@@ -195,7 +205,10 @@ class PdfPageController extends ChangeNotifier {
     await loadAllAnnotations();
   }
 
-  Future<void> addStickyNote(PdfGestureDetails details, String commentText) async {
+  Future<void> addStickyNote(
+    PdfGestureDetails details,
+    String commentText,
+  ) async {
     List<Map<String, double>> geometry = [
       {
         'left': details.pagePosition.dx,
@@ -217,7 +230,10 @@ class PdfPageController extends ChangeNotifier {
     await loadAllAnnotations();
   }
 
-  Future<void> deleteStickyNote(AnnotationData note, StickyNoteAnnotation annotation) async {
+  Future<void> deleteStickyNote(
+    AnnotationData note,
+    StickyNoteAnnotation annotation,
+  ) async {
     await (db.delete(db.annotation)..where((t) => t.id.equals(note.id))).go();
     pdfViewerController.deselectAnnotation(annotation);
     await loadAllAnnotations();
@@ -232,8 +248,12 @@ class PdfPageController extends ChangeNotifier {
     try {
       await Future.delayed(const Duration(milliseconds: 100));
 
-      final pdf_core.PdfDocument document = pdf_core.PdfDocument(inputBytes: doc.fileData!);
-      final pdf_core.PdfTextExtractor extractor = pdf_core.PdfTextExtractor(document);
+      final pdf_core.PdfDocument document = pdf_core.PdfDocument(
+        inputBytes: doc.fileData!,
+      );
+      final pdf_core.PdfTextExtractor extractor = pdf_core.PdfTextExtractor(
+        document,
+      );
 
       List<Map<String, dynamic>> items = [];
       final RegExp titleCaseRegex = RegExp(r'^[A-Z0-9À-Ú]');
@@ -251,7 +271,9 @@ class PdfPageController extends ChangeNotifier {
         String? foundHeading;
         double pageHeightThreshold = 800.0;
         if (pageLines.isNotEmpty) {
-          pageHeightThreshold = pageLines.map((e) => e.bounds.bottom).reduce((a, b) => a > b ? a : b);
+          pageHeightThreshold = pageLines
+              .map((e) => e.bounds.bottom)
+              .reduce((a, b) => a > b ? a : b);
         }
 
         final double headerZoneLimit = pageHeightThreshold * 0.10;
@@ -275,7 +297,8 @@ class PdfPageController extends ChangeNotifier {
           }
 
           bool isTitleStyle = titleCaseRegex.hasMatch(cleanedText);
-          bool isStandaloneLine = line.wordCollection.length < 12 && !cleanedText.endsWith('.');
+          bool isStandaloneLine =
+              line.wordCollection.length < 12 && !cleanedText.endsWith('.');
 
           if ((isBold || isTitleStyle) && isStandaloneLine) {
             foundHeading = cleanedText;
