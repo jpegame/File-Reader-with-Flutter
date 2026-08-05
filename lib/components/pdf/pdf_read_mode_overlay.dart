@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
-import '../database/app_database.dart';
+import '../../database/app_database.dart';
 import 'read_mode_config.dart';
 
 class PdfReadModeOverlay extends StatefulWidget {
