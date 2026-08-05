@@ -12,6 +12,8 @@ import 'utils/annotation_extension.dart';
 import 'components/pdf_search_bar.dart';
 import 'components/pdf_text_selection_toolbar.dart';
 import 'components/pdf_read_mode_overlay.dart';
+import 'components/pdf_tts_controller.dart';
+import 'components/pdf_audio_player_bar.dart';
 
 class PdfPage extends StatefulWidget {
   final DocumentData doc;
@@ -29,6 +31,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
       GlobalKey<SfPdfViewerState>();
   final TextEditingController _searchController = TextEditingController();
   final ValueNotifier<int> _currentPageNotifier = ValueNotifier<int>(1);
+  final PdfTtsController _ttsController = PdfTtsController();
 
   PdfTextSearchResult? _searchResult;
   Timer? _searchDebounce;
@@ -64,6 +67,7 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
     _searchDebounce?.cancel();
     _saveDebounce?.cancel();
     _controller.dispose();
+    _ttsController.dispose();
     super.dispose();
   }
 
@@ -631,6 +635,21 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
       appBar: AppBar(
         title: Text(widget.doc.name),
         actions: [
+          ListenableBuilder(
+            listenable: _ttsController,
+            builder: (context, _) {
+              return IconButton(
+                icon: Icon(
+                  _ttsController.isActive
+                      ? Icons.volume_up
+                      : Icons.volume_up_outlined,
+                  color: _ttsController.isActive ? Colors.redAccent : null,
+                ),
+                onPressed: () =>
+                    _ttsController.togglePlayer(widget.doc.fileData!),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.summarize),
             tooltip: "Gerar Sumário Automático",
@@ -847,6 +866,22 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                 ),
               ),
             ),
+          ),
+          ListenableBuilder(
+            listenable: _ttsController,
+            builder: (context, _) {
+              if (!_ttsController.isActive) return const SizedBox.shrink();
+
+              return Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: PdfAudioPlayerBar(
+                  ttsController: _ttsController,
+                  fileData: widget.doc.fileData!,
+                ),
+              );
+            },
           ),
         ],
       ),
