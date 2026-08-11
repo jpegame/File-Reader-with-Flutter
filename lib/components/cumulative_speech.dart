@@ -55,12 +55,14 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
     await _flutterTts.setLanguage("en-US");
     await _flutterTts.setPitch(1.0);
 
+    // Normalize speech rate across platforms
     if (kIsWeb) {
       await _flutterTts.setSpeechRate(1.0);
     } else {
       await _flutterTts.setSpeechRate(0.5);
     }
 
+    // Completion Callback
     _flutterTts.setCompletionHandler(() {
       _stopTimer();
       if (mounted) {
@@ -74,11 +76,10 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
       }
     });
 
-    // Updated Error Handler: Ignores browser interruption events on pause/stop
+    // Error Handler (ignores benign Web interrupt logs on stop/pause)
     _flutterTts.setErrorHandler((msg) {
       final errorStr = msg.toString().toLowerCase();
 
-      // Ignore intentional user cancellations on web
       if (errorStr.contains('interrupted') ||
           errorStr.contains('canceled') ||
           errorStr.contains('speechsynthesiserrorevent') ||
@@ -93,10 +94,42 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
       }
     });
 
-    // Native progress fallback & iOS audio setup...
+    // Native Progress Handler Sync
+    _flutterTts.setProgressHandler((
+      String text,
+      int? start,
+      int? end,
+      String word,
+    ) {
+      if (!mounted || start == null || end == null) return;
+
+      final matchIndex = _words.indexWhere((w) => w.start >= start);
+      if (matchIndex != -1) {
+        _currentWordIndex = matchIndex;
+      }
+    });
+
+    // iOS Audio Category Setup
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      try {
+        await _flutterTts.setSharedInstance(true);
+        await _flutterTts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [
+            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+            IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+            IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+          ],
+          IosTextToSpeechAudioMode.defaultMode,
+        );
+      } catch (e) {
+        debugPrint("iOS Audio Configuration error: $e");
+      }
+    }
   }
 
-  // Parse text into words with duration estimates
+  // Your Fine-Tuned Word Parser
   List<WordInfo> _parseWords(String text) {
     final List<WordInfo> list = [];
     final regExp = RegExp(r'\S+');
@@ -128,7 +161,7 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
     return list;
   }
 
-  // Synchronized Playback Timer Engine
+  // Playback Timer Engine
   void _startTimer(String fullText) {
     _stopTimer();
     if (_words.isEmpty) return;
@@ -148,7 +181,6 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
           _progress = (currentWord.end / fullText.length).clamp(0.0, 1.0);
         });
 
-        // Delay timer until current word duration completes
         _playbackTimer?.cancel();
         _playbackTimer = Timer(
           Duration(milliseconds: currentWord.durationMs),
@@ -169,19 +201,53 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
     _playbackTimer = null;
   }
 
-  // Core Audio Controls
+  // Jump/Seek directly to a fraction [0.0 - 1.0] along the progress bar
+  Future<void> _seekToFraction(double fraction, String fullParagraph) async {
+    if (fullParagraph.isEmpty) return;
+
+    if (_words.isEmpty) {
+      _words = _parseWords(fullParagraph);
+    }
+    if (_words.isEmpty) return;
+
+    final clampedFraction = fraction.clamp(0.0, 1.0);
+    final targetChar = (clampedFraction * fullParagraph.length).round();
+
+    // Locate the word corresponding to target position
+    int targetIndex = _words.indexWhere((w) => w.end >= targetChar);
+    if (targetIndex == -1) {
+      targetIndex = _words.length - 1;
+    }
+
+    final targetWord = _words[targetIndex];
+
+    setState(() {
+      _currentWordIndex = targetIndex;
+      _currentStart = targetWord.start;
+      _currentEnd = targetWord.end;
+      _progress = (targetWord.end / fullParagraph.length).clamp(0.0, 1.0);
+    });
+
+    // If currently playing, jump speech directly to the seeked location
+    if (_ttsState == TtsState.playing) {
+      _stopTimer();
+      await _flutterTts.stop();
+      final remainingText = fullParagraph.substring(targetWord.start);
+      _startTimer(fullParagraph);
+      await _flutterTts.speak(remainingText);
+    }
+  }
+
+  // Play / Pause / Resume
   Future<void> _playOrPause() async {
     final fullParagraph = _sentences.join(' ');
     if (fullParagraph.isEmpty) return;
 
-    // 1. ACTION: PAUSE
     if (_ttsState == TtsState.playing) {
-      await _flutterTts.stop(); // Safe, clean stop across all platforms
+      await _flutterTts.stop();
       _stopTimer();
       setState(() => _ttsState = TtsState.paused);
-    }
-    // 2. ACTION: RESUME FROM PAUSED STATE
-    else if (_ttsState == TtsState.paused) {
+    } else if (_ttsState == TtsState.paused) {
       if (_words.isEmpty) {
         _words = _parseWords(fullParagraph);
       }
@@ -197,9 +263,7 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
       await _flutterTts.speak(
         remainingText.isNotEmpty ? remainingText : fullParagraph,
       );
-    }
-    // 3. ACTION: PLAY FROM STOPPED STATE
-    else {
+    } else {
       _words = _parseWords(fullParagraph);
       _currentWordIndex = 0;
       _progress = 0.0;
@@ -237,11 +301,9 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
       final fullParagraph = _sentences.join(' ');
       _words = _parseWords(fullParagraph);
 
-      // Play newly added sentence
       await _flutterTts.stop();
       _stopTimer();
 
-      // Set index to start of the newly added sentence
       final newSentenceIndex = fullParagraph.lastIndexOf(newText);
       final wordIndex = _words.indexWhere((w) => w.start >= newSentenceIndex);
 
@@ -375,22 +437,32 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 16.0,
-              vertical: 12.0,
+              vertical: 8.0,
             ),
             child: Column(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: _progress,
-                    minHeight: 6,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).primaryColor,
+                // Interactive Seekable Progress Slider
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 6.0,
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6.0,
                     ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 14.0,
+                    ),
+                    activeTrackColor: Theme.of(context).primaryColor,
+                    inactiveTrackColor: Colors.grey.shade200,
+                    thumbColor: Theme.of(context).primaryColor,
+                  ),
+                  child: Slider(
+                    value: _progress.clamp(0.0, 1.0),
+                    onChanged: fullParagraph.isEmpty
+                        ? null
+                        : (val) => _seekToFraction(val, fullParagraph),
                   ),
                 ),
-                const SizedBox(height: 8.0),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
