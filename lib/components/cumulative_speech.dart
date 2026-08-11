@@ -1,13 +1,12 @@
+import 'package:flutter/foundation.dart'; // Required for kIsWeb & defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class CumulativeSpeechWidget extends StatefulWidget {
   final double containerHeight;
 
-  const CumulativeSpeechWidget({
-    Key? key,
-    this.containerHeight = 180.0,
-  }) : super(key: key);
+  const CumulativeSpeechWidget({Key? key, this.containerHeight = 180.0})
+    : super(key: key);
 
   @override
   State<CumulativeSpeechWidget> createState() => _CumulativeSpeechWidgetState();
@@ -25,21 +24,55 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
   }
 
   void _initTts() async {
-    await _flutterTts.setLanguage("en-US");
+    await _flutterTts.setLanguage("pt-BR");
     await _flutterTts.setPitch(1.0);
     await _flutterTts.setSpeechRate(0.5);
+
+    // iOS-Only Category Configuration
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      try {
+        await _flutterTts.setSharedInstance(true);
+        await _flutterTts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [
+            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+            IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+            IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+          ],
+          IosTextToSpeechAudioMode.defaultMode,
+        );
+      } catch (e) {
+        debugPrint("iOS Audio Configuration error: $e");
+      }
+    }
+  }
+
+  // Safely trigger speech playback
+  Future<void> _speakText(String text) async {
+    if (text.isEmpty) return;
+    // Stop any stuck audio streams before initiating new speech
+    await _flutterTts.stop();
+    await _flutterTts.speak(text);
   }
 
   Future<void> _handleConfirm() async {
     final newText = _controller.text.trim();
-    if (newText.isEmpty) return;
+    FocusScope.of(context).unfocus();
 
-    await _flutterTts.speak(newText);
-
-    setState(() {
-      _sentences.add(newText);
-      _controller.clear();
-    });
+    // Case 1: User typed new text into the input field
+    if (newText.isNotEmpty) {
+      setState(() {
+        _sentences.add(newText);
+        _controller.clear();
+      });
+      await _speakText(newText);
+    }
+    // Case 2: Input field is empty, but user tapped "Speak" to hear cumulative text
+    else if (_sentences.isNotEmpty) {
+      final fullParagraph = _sentences.join(' ');
+      await _speakText(fullParagraph);
+    }
   }
 
   @override
@@ -54,8 +87,7 @@ class _CumulativeSpeechWidgetState extends State<CumulativeSpeechWidget> {
     final fullParagraph = _sentences.join(' ');
 
     return Column(
-      mainAxisSize:
-          MainAxisSize.min,
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
