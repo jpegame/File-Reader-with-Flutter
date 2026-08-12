@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/drift.dart' as drift;
 
 import '../../database/app_database.dart';
-import 'pdf_tts_controller.dart';
 
 class PdfPageController extends ChangeNotifier {
   final DocumentData doc;
@@ -18,7 +17,6 @@ class PdfPageController extends ChangeNotifier {
   final GlobalKey<SfPdfViewerState> pdfViewerKey =
       GlobalKey<SfPdfViewerState>();
   final TextEditingController searchController = TextEditingController();
-  final PdfTtsController ttsController = PdfTtsController();
 
   Timer? _searchDebounce;
   Timer? _saveDebounce;
@@ -28,6 +26,7 @@ class PdfPageController extends ChangeNotifier {
   bool showSearchBar = false;
   bool isInitialJumpDone = false;
   bool isCommentModeEnabled = false;
+  bool isAudioPlaying = false;
   bool isGeneratingSummary = false;
   bool isReadModeEnabled = false;
 
@@ -56,7 +55,6 @@ class PdfPageController extends ChangeNotifier {
     _searchDebounce?.cancel();
     _saveDebounce?.cancel();
     pdfViewerController.dispose();
-    ttsController.dispose();
     super.dispose();
   }
 
@@ -71,6 +69,11 @@ class PdfPageController extends ChangeNotifier {
 
   void toggleCommentMode() {
     isCommentModeEnabled = !isCommentModeEnabled;
+    notifyListeners();
+  }
+
+  void toggleAudioPlayer() {
+    isAudioPlaying = !isAudioPlaying;
     notifyListeners();
   }
 

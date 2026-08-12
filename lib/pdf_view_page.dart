@@ -9,7 +9,7 @@ import 'floating_horizontal_menu.dart';
 import 'components/pdf/pdf_search_bar.dart';
 import 'components/pdf/pdf_text_selection_toolbar.dart';
 import 'components/pdf/pdf_read_mode_overlay.dart';
-import 'components/pdf/pdf_audio_player_bar.dart';
+import 'components/pdf/pdf_audio_player.dart';
 
 class PdfPage extends StatefulWidget {
   final DocumentData doc;
@@ -64,33 +64,35 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
           appBar: AppBar(
             title: Text(widget.doc.name),
             actions: [
-              ListenableBuilder(
-                listenable: _pageController.ttsController,
-                builder: (context, _) {
-                  final tts = _pageController.ttsController;
-                  return IconButton(
-                    icon: Icon(
-                      tts.isActive ? Icons.volume_up : Icons.volume_up_outlined,
-                      color: tts.isActive ? Colors.redAccent : null,
-                    ),
-                    onPressed: () => tts.togglePlayer(widget.doc.fileData!),
-                  );
-                },
+              IconButton(
+                icon: Icon(
+                  _pageController.isAudioPlaying
+                      ? Icons.volume_up
+                      : Icons.volume_up_outlined,
+                  color: _pageController.isAudioPlaying
+                      ? Colors.redAccent
+                      : null,
+                ),
+                onPressed: () => _pageController.toggleAudioPlayer(),
               ),
               IconButton(
                 icon: const Icon(Icons.summarize),
                 tooltip: "Gerar Sumário Automático",
-                onPressed: () => PdfPageModals.showSummaryMenu(context, _pageController),
+                onPressed: () =>
+                    PdfPageModals.showSummaryMenu(context, _pageController),
               ),
               IconButton(
                 icon: const Icon(Icons.collections_bookmark),
                 tooltip: "Ver todas as anotações",
-                onPressed: () => PdfPageModals.showAnnotationsMenu(context, _pageController),
+                onPressed: () =>
+                    PdfPageModals.showAnnotationsMenu(context, _pageController),
               ),
               IconButton(
                 icon: Icon(
                   Icons.note_add,
-                  color: _pageController.isCommentModeEnabled ? Colors.amber : null,
+                  color: _pageController.isCommentModeEnabled
+                      ? Colors.amber
+                      : null,
                 ),
                 tooltip: "Ferramenta Nota Autoadesiva",
                 onPressed: () {
@@ -112,8 +114,10 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                 ? PdfSearchBar(
                     controller: _pageController.searchController,
                     onChanged: _pageController.onSearchChanged,
-                    onPrevMatch: () => _pageController.searchResult?.previousInstance(),
-                    onNextMatch: () => _pageController.searchResult?.nextInstance(),
+                    onPrevMatch: () =>
+                        _pageController.searchResult?.previousInstance(),
+                    onNextMatch: () =>
+                        _pageController.searchResult?.nextInstance(),
                     onClose: () => _pageController.toggleSearchBar(false),
                   )
                 : null,
@@ -129,18 +133,33 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                 onTap: _handlePageTap,
                 onAnnotationSelected: (annotation) {
                   if (annotation is StickyNoteAnnotation) {
-                    PdfPageModals.showStickyNoteDetail(context, _pageController, annotation);
+                    PdfPageModals.showStickyNoteDetail(
+                      context,
+                      _pageController,
+                      annotation,
+                    );
                   }
                 },
-                currentSearchTextHighlightColor: const Color.fromRGBO(255, 72, 0, 0.35),
-                otherSearchTextHighlightColor: const Color.fromRGBO(208, 255, 0, 0.35),
+                currentSearchTextHighlightColor: const Color.fromRGBO(
+                  255,
+                  72,
+                  0,
+                  0.35,
+                ),
+                otherSearchTextHighlightColor: const Color.fromRGBO(
+                  208,
+                  255,
+                  0,
+                  0.35,
+                ),
                 pageLayoutMode: _pageController.pageLayoutMode,
                 scrollDirection: _pageController.scrollDirection,
                 onDocumentLoaded: (d) {
                   _pageController.setTotalPages(d.document.pages.count);
                   _pageController.handleInitialJump();
                 },
-                onPageChanged: (d) => _pageController.updatePage(d.newPageNumber),
+                onPageChanged: (d) =>
+                    _pageController.updatePage(d.newPageNumber),
               ),
               if (_pageController.isReadModeEnabled)
                 PdfReadModeOverlay(
@@ -154,11 +173,16 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                   },
                   onClose: () => _pageController.setReadMode(false),
                 ),
-              if (_pageController.currentSelectionDetails?.globalSelectedRegion != null)
+              if (_pageController
+                      .currentSelectionDetails
+                      ?.globalSelectedRegion !=
+                  null)
                 PdfTextSelectionToolbar(
                   selectionDetails: _pageController.currentSelectionDetails!,
-                  onHighlightPressed: () => _pageController.executeSaveAnnotation('highlight'),
-                  onUnderlinePressed: () => _pageController.executeSaveAnnotation('underline'),
+                  onHighlightPressed: () =>
+                      _pageController.executeSaveAnnotation('highlight'),
+                  onUnderlinePressed: () =>
+                      _pageController.executeSaveAnnotation('underline'),
                 ),
               Positioned(
                 bottom: 16,
@@ -174,7 +198,10 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                     FloatingActionButton(
                       heroTag: "settings_fab",
                       mini: true,
-                      onPressed: () => PdfPageModals.showSettingsModal(context, _pageController),
+                      onPressed: () => PdfPageModals.showSettingsModal(
+                        context,
+                        _pageController,
+                      ),
                       child: const Icon(Icons.settings),
                     ),
                   ],
@@ -185,17 +212,23 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                 right: 16,
                 child: GestureDetector(
                   onTap: () async {
-                    final int? targetPage = await PdfPageModals.showPageJumpDialog(
-                      context,
-                      _pageController.currentPage,
-                      _pageController.totalPages,
-                    );
+                    final int? targetPage =
+                        await PdfPageModals.showPageJumpDialog(
+                          context,
+                          _pageController.currentPage,
+                          _pageController.totalPages,
+                        );
                     if (targetPage != null) {
-                      _pageController.pdfViewerController.jumpToPage(targetPage);
+                      _pageController.pdfViewerController.jumpToPage(
+                        targetPage,
+                      );
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color.fromRGBO(0, 0, 0, 0.6),
                       borderRadius: BorderRadius.circular(20),
@@ -217,22 +250,13 @@ class _PdfPageState extends State<PdfPage> with PdfAnnotationManager {
                   ),
                 ),
               ),
-              ListenableBuilder(
-                listenable: _pageController.ttsController,
-                builder: (context, _) {
-                  if (!_pageController.ttsController.isActive) return const SizedBox.shrink();
-
-                  return Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: PdfAudioPlayerBar(
-                      ttsController: _pageController.ttsController,
-                      fileData: widget.doc.fileData!,
-                    ),
-                  );
-                },
-              ),
+              if (_pageController.isAudioPlaying)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: PdfAudioPlayer(fileData: widget.doc.fileData!),
+                ),
             ],
           ),
         );
