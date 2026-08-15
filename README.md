@@ -36,7 +36,7 @@ Muitos estudantes enfrentam dificuldades com a dispersão de conteúdos didátic
 
 ## Diagrama de entidade relacionamento
 
-![Diagrama](diagrama.png)
+![Diagrama](assets/diagrama.png)
 
 ---
 
