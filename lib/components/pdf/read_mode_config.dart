@@ -9,9 +9,24 @@ class ReadModeConfig {
   const ReadModeConfig({
     this.fontSize = 16.0,
     this.lineSpacing = 1.15,
-    this.backgroundColor = const Color.fromARGB(255, 241, 241, 241),
-    this.textColor = const Color.fromARGB(255, 0, 0, 0),
+    this.backgroundColor = const Color(0xFFF1F1F1),
+    this.textColor = Colors.black87,
   });
+
+  factory ReadModeConfig.fromContext(
+    BuildContext context, {
+    double fontSize = 16.0,
+    double lineSpacing = 1.15,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ReadModeConfig(
+      fontSize: fontSize,
+      lineSpacing: lineSpacing,
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF1F1F1),
+      textColor: isDark ? Colors.white70 : Colors.black87,
+    );
+  }
 
   ReadModeConfig copyWith({
     double? fontSize,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../database/app_database.dart';
-import 'components/cumulative_speech.dart';
 
 class ConfigPage extends StatelessWidget {
   final AppDatabase db;
@@ -38,46 +37,6 @@ class ConfigPage extends StatelessWidget {
                 },
               ),
             ],
-          ),
-          const Divider(height: 40),
-          const CumulativeSpeechWidget(),
-          const Divider(height: 40),
-          ListTile(
-            leading: const Icon(Icons.storage),
-            title: const Text("Banco de dados SQLite"),
-            subtitle: const Text("Status: Conectado"),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_sweep, color: Colors.red),
-              onPressed: () => _confirmDelete(context),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Limpar dados?"),
-        content: const Text(
-          "Isso apagará todas as categorias, documentos e anotações.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancelar"),
-          ),
-          TextButton(
-            onPressed: () async {
-              final categories = await db.categoryDao.watchCategories().first;
-              for (var cat in categories) {
-                await db.categoryDao.deleteCategory(cat.id);
-              }
-              if (context.mounted) Navigator.pop(context);
-            },
-            child: const Text("Apagar", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

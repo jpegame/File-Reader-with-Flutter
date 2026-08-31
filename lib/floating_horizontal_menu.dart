@@ -4,20 +4,21 @@ class FloatingHorizontalMenu extends StatefulWidget {
   final List<Widget> children;
   final Duration animationDuration;
   final IconData icon;
+  final Object? heroTag;
 
   const FloatingHorizontalMenu({
     super.key,
     required this.children,
     this.animationDuration = const Duration(milliseconds: 250),
     this.icon = Icons.menu,
+    this.heroTag,
   });
 
   @override
-  _FloatingHorizontalMenuState createState() => _FloatingHorizontalMenuState();
+  State<FloatingHorizontalMenu> createState() => _FloatingHorizontalMenuState();
 }
 
-class _FloatingHorizontalMenuState extends State<FloatingHorizontalMenu>
-    with SingleTickerProviderStateMixin {
+class _FloatingHorizontalMenuState extends State<FloatingHorizontalMenu> {
   bool _isOpen = false;
 
   void _toggleMenu() {
@@ -28,32 +29,19 @@ class _FloatingHorizontalMenuState extends State<FloatingHorizontalMenu>
 
   @override
   Widget build(BuildContext context) {
-    Widget mainButton() {
-      return SizedBox(
-        width: 48,
-        height: 48,
-        child: Material(
-          color: Theme.of(context).colorScheme.primary,
-          shape: const CircleBorder(),
-          elevation: 6,
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: _toggleMenu,
-            child: Icon(widget.icon, color: Colors.white, size: 22),
-          ),
-        ),
-      );
-    }
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        mainButton(),
+        FloatingActionButton(
+          heroTag: widget.heroTag,
+          onPressed: _toggleMenu,
+          child: Icon(_isOpen ? Icons.close : widget.icon),
+        ),
 
         AnimatedContainer(
           duration: widget.animationDuration,
           curve: Curves.easeInOut,
-          width: _isOpen ? (widget.children.length * 56.0) : 0,
+          width: _isOpen ? (widget.children.length * 48.0) : 0,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(

@@ -8,6 +8,7 @@ import '../database/app_database.dart';
 class InsertPage extends StatefulWidget {
   final AppDatabase db;
   final VoidCallback onSave;
+
   const InsertPage({super.key, required this.db, required this.onSave});
 
   @override
@@ -15,6 +16,7 @@ class InsertPage extends StatefulWidget {
 }
 
 class _InsertPageState extends State<InsertPage> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _newCatController = TextEditingController();
 
@@ -28,6 +30,13 @@ class _InsertPageState extends State<InsertPage> {
   void initState() {
     super.initState();
     _loadCategories();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _newCatController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCategories() async {
@@ -73,7 +82,7 @@ class _InsertPageState extends State<InsertPage> {
       setState(() {
         _pickedFile = result.files.first;
         _fileBytes = _pickedFile!.bytes;
-        if (_nameController.text.isEmpty) {
+        if (_nameController.text.trim().isEmpty) {
           _nameController.text = cleanFileName(_pickedFile!.name);
         }
       });
@@ -81,10 +90,19 @@ class _InsertPageState extends State<InsertPage> {
   }
 
   Future<void> _saveDocument() async {
-    if (_pickedFile == null || _selectedCategoryId == null) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_pickedFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione um arquivo PDF antes de salvar.'),
+        ),
+      );
+      return;
+    }
 
     await widget.db.documentDao.insertDocument(
-      name: _nameController.text,
+      name: _nameController.text.trim(),
       categoryId: _selectedCategoryId!,
       fileData: kIsWeb ? _pickedFile!.bytes : null,
       filePath: kIsWeb ? null : _pickedFile!.path,
@@ -96,26 +114,46 @@ class _InsertPageState extends State<InsertPage> {
   void _showAddCategoryDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Nova Categoria"),
         content: TextField(
           controller: _newCatController,
-          decoration: const InputDecoration(hintText: "Nome da categoria"),
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: "Nome da categoria",
+            border: OutlineInputBorder(),
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              _newCatController.clear();
+              Navigator.pop(dialogContext);
+            },
             child: const Text("Cancelar"),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () async {
-              if (_newCatController.text.isNotEmpty) {
-                await widget.db.categoryDao.insertCategory(
-                  _newCatController.text,
-                );
+              final catName = _newCatController.text.trim();
+              if (catName.isNotEmpty) {
+                await widget.db.categoryDao.insertCategory(catName);
                 _newCatController.clear();
-                if (context.mounted) Navigator.pop(context);
-                await _loadCategories();
+
+                if (mounted) {
+                  Navigator.pop(dialogContext);
+                  final updatedCats = await widget.db.categoryDao
+                      .watchCategories()
+                      .first;
+                  final createdCat = updatedCats.firstWhere(
+                    (c) => c.name.toLowerCase() == catName.toLowerCase(),
+                    orElse: () => updatedCats.last,
+                  );
+
+                  setState(() {
+                    _categories = updatedCats;
+                    _selectedCategoryId = createdCat.id;
+                  });
+                }
               }
             },
             child: const Text("Adicionar"),
@@ -125,98 +163,173 @@ class _InsertPageState extends State<InsertPage> {
     );
   }
 
+  List<String> _getMissingRequirements() {
+    List<String> missing = [];
+    if (_nameController.text.trim().isEmpty) missing.add("Nome do documento");
+    if (_selectedCategoryId == null) missing.add("Categoria");
+    if (_pickedFile == null) missing.add("Arquivo PDF");
+    return missing;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final missingFields = _getMissingRequirements();
+    final bool isReadyToSave = missingFields.isEmpty;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Nome do Documento',
-              border: OutlineInputBorder(),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Nome do Documento *',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() {}),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Por favor, informe o nome do documento';
+                }
+                return null;
+              },
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  initialValue: _selectedCategoryId,
-                  decoration: const InputDecoration(
-                    labelText: 'Categoria',
-                    border: OutlineInputBorder(),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<int>(
+                    value: _selectedCategoryId,
+                    decoration: InputDecoration(
+                      labelText: 'Categoria *',
+                      border: const OutlineInputBorder(),
+                      helperText: _categories.isEmpty
+                          ? "Nenhuma categoria cadastrada"
+                          : null,
+                      helperStyle: const TextStyle(color: Colors.orange),
+                    ),
+                    items: [
+                      for (final cat in _categories)
+                        DropdownMenuItem(value: cat.id, child: Text(cat.name)),
+                    ],
+                    onChanged: (val) =>
+                        setState(() => _selectedCategoryId = val),
+                    hint: Text(
+                      _categories.isEmpty
+                          ? "Cadastre uma categoria ao lado ->"
+                          : "Selecione uma categoria",
+                    ),
+                    validator: (val) {
+                      if (val == null) return 'Selecione uma categoria';
+                      return null;
+                    },
                   ),
-                  items: [
-                    for (final cat in _categories)
-                      DropdownMenuItem(value: cat.id, child: Text(cat.name)),
-                  ],
-                  onChanged: (val) => setState(() => _selectedCategoryId = val),
-                  hint: const Text("Selecione"),
+                ),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: IconButton.filled(
+                    tooltip: "Adicionar Nova Categoria",
+                    onPressed: _showAddCategoryDialog,
+                    icon: const Icon(Icons.add),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: BorderSide(
+                  color: _pickedFile == null ? Colors.orange : Colors.grey,
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                onPressed: _showAddCategoryDialog,
-                icon: const Icon(Icons.add),
+              onPressed: _pickFile,
+              icon: const Icon(Icons.picture_as_pdf),
+              label: Text(
+                _pickedFile == null
+                    ? "Selecionar PDF *"
+                    : "Arquivo: ${_pickedFile!.name}",
+                style: TextStyle(
+                  fontWeight: _pickedFile == null
+                      ? FontWeight.normal
+                      : FontWeight.bold,
+                ),
               ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          OutlinedButton.icon(
-            onPressed: _pickFile,
-            icon: const Icon(Icons.picture_as_pdf),
-            label: Text(
-              _pickedFile == null ? "Selecionar PDF" : _pickedFile!.name,
             ),
-          ),
 
-          const SizedBox(height: 24),
-          const Text(
-            "Preview (Pág. 1)",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            height: 400,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade400),
-              borderRadius: BorderRadius.circular(8),
+            const SizedBox(height: 24),
+            const Text(
+              "Preview",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            child: _fileBytes != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: SfPdfViewer.memory(
-                      _fileBytes!,
-                      enableDoubleTapZooming: false,
-                      enableTextSelection: false,
-                      canShowPaginationDialog: false,
-                      canShowScrollHead: false,
+            const SizedBox(height: 8),
+            Container(
+              height: 380,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: _fileBytes != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SfPdfViewer.memory(
+                        _fileBytes!,
+                        enableDoubleTapZooming: false,
+                        enableTextSelection: false,
+                        canShowPaginationDialog: false,
+                        canShowScrollHead: false,
+                      ),
+                    )
+                  : const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.picture_as_pdf,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            "Nenhum arquivo selecionado",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
                     ),
-                  )
-                : const Center(
-                    child: Icon(
-                      Icons.picture_as_pdf,
-                      size: 50,
-                      color: Colors.grey,
-                    ),
+            ),
+            const SizedBox(height: 24),
+            if (!isReadyToSave)
+              Padding(
+                padding: const EdgeInsets.only(
+                  bottom: 8.0,
+                ),
+                child: Text(
+                  "Pendente: ${missingFields.join(', ')}",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.orange,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
-          ),
+                ),
+              ),
 
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: (_pickedFile == null || _selectedCategoryId == null)
-                ? null
-                : _saveDocument,
-            child: const Text('Salvar'),
-          ),
-        ],
+            FilledButton(
+              onPressed: isReadyToSave ? _saveDocument : null,
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
       ),
     );
   }

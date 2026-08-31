@@ -46,10 +46,7 @@ class _HomePageState extends State<HomePage> {
                 child: _buildCategoryDropdown(categoriesFuture),
               ),
               const SizedBox(width: 10),
-              Expanded(
-                flex: 3,
-                child: _buildSortDropdown(),
-              ),
+              Expanded(flex: 3, child: _buildSortDropdown()),
             ],
           ),
         ),
@@ -116,8 +113,12 @@ class _HomePageState extends State<HomePage> {
                               Container(
                                 height: 120,
                                 width: double.infinity,
-                                decoration: const BoxDecoration(
-                                  color: Color.fromARGB(255, 218, 218, 218),
+                                decoration: BoxDecoration(
+                                  color:
+                                      Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? const Color.fromARGB(255, 84, 84, 84)
+                                      : const Color.fromARGB(255, 218, 218, 218),
                                 ),
                                 child: const Center(
                                   child: Icon(

@@ -18,39 +18,59 @@ class PdfSearchBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: "Procurar palavra",
-                fillColor: Colors.white,
-                filled: true,
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color:
+          Theme.of(context).appBarTheme.backgroundColor ?? colorScheme.surface,
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 8, top: 0, right: 8, bottom: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                autofocus: true,
+                style: TextStyle(color: colorScheme.onSurface),
+                decoration: InputDecoration(
+                  hintText: "Procurar palavra",
+                  hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                  fillColor: colorScheme.surfaceContainerHighest,
+                  filled: true,
+                  isDense: true,
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
+                onChanged: onChanged,
               ),
-              onChanged: onChanged,
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: onPrevMatch,
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: onNextMatch,
-          ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: onClose,
-          ),
-        ],
+            IconButton(
+              icon: Icon(
+                Icons.chevron_left,
+                color: Colors.white,
+              ),
+              onPressed: onPrevMatch,
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.chevron_right,
+                color: Colors.white,
+              ),
+              onPressed: onNextMatch,
+            ),
+            IconButton(
+              icon: Icon(Icons.close, color: Colors.white),
+              onPressed: onClose,
+            ),
+          ],
+        ),
       ),
     );
   }
