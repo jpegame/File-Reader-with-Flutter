@@ -104,7 +104,7 @@ class _InsertPageState extends State<InsertPage> {
     await widget.db.documentDao.insertDocument(
       name: _nameController.text.trim(),
       categoryId: _selectedCategoryId!,
-      fileData: kIsWeb ? _pickedFile!.bytes : null,
+      fileData: _pickedFile!.bytes,
       filePath: kIsWeb ? null : _pickedFile!.path,
     );
 
