@@ -1,15 +1,23 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../database/app_database.dart';
+import 'pdf_view_page.dart';
 
 class InsertPage extends StatefulWidget {
   final AppDatabase db;
   final VoidCallback onSave;
+  final String? initialFilePath;
 
-  const InsertPage({super.key, required this.db, required this.onSave});
+  const InsertPage({
+    super.key,
+    required this.db,
+    required this.onSave,
+    this.initialFilePath,
+  });
 
   @override
   State<InsertPage> createState() => _InsertPageState();
@@ -30,6 +38,19 @@ class _InsertPageState extends State<InsertPage> {
   void initState() {
     super.initState();
     _loadCategories();
+
+    if (widget.initialFilePath != null) {
+      _loadPdfFromPath(widget.initialFilePath!);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant InsertPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialFilePath != null &&
+        widget.initialFilePath != oldWidget.initialFilePath) {
+      _loadPdfFromPath(widget.initialFilePath!);
+    }
   }
 
   @override
@@ -37,6 +58,29 @@ class _InsertPageState extends State<InsertPage> {
     _nameController.dispose();
     _newCatController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPdfFromPath(String filePath) async {
+    try {
+      final file = File(filePath);
+      final bytes = await file.readAsBytes();
+      final fileName = filePath.split('/').last;
+
+      setState(() {
+        _fileBytes = bytes;
+        _pickedFile = PlatformFile(
+          name: fileName,
+          path: filePath,
+          size: bytes.length,
+          bytes: bytes,
+        );
+        if (_nameController.text.trim().isEmpty) {
+          _nameController.text = cleanFileName(fileName);
+        }
+      });
+    } catch (e) {
+      debugPrint("Error loading opened PDF: $e");
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -101,14 +145,32 @@ class _InsertPageState extends State<InsertPage> {
       return;
     }
 
-    await widget.db.documentDao.insertDocument(
+    final int insertedId = await widget.db.documentDao.insertDocument(
       name: _nameController.text.trim(),
       categoryId: _selectedCategoryId!,
       fileData: _pickedFile!.bytes,
       filePath: kIsWeb ? null : _pickedFile!.path,
     );
 
+    final doc = await widget.db.documentDao.getDocumentById(insertedId);
+
+    setState(() {
+      _pickedFile = null;
+      _fileBytes = null;
+      _nameController.clear();
+      _selectedCategoryId = null;
+    });
+
     widget.onSave();
+
+    if (mounted && doc != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfPage(doc: doc, db: widget.db),
+        ),
+      );
+    }
   }
 
   void _showAddCategoryDialog() {

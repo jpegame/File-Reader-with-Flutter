@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'components/header.dart';
 import 'components/footer.dart';
 import 'home.dart';
 import 'config_page.dart';
 import 'insert_page.dart';
 import 'database/app_database.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 void main() {
   runApp(const MainApp());
@@ -131,7 +134,7 @@ class _MainAppState extends State<MainApp> {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: const Color(0xFF2A3D33)),
+            borderSide: const BorderSide(color: Color(0xFF2A3D33)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
@@ -162,6 +165,51 @@ class MainAppPage extends StatefulWidget {
 
 class _MainAppPageState extends State<MainAppPage> {
   int _currentIndex = 0;
+  StreamSubscription? _intentDataStreamSubscription;
+  String? _incomingPdfPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSharingIntent();
+  }
+
+  void _initSharingIntent() {
+    if (kIsWeb) return;
+
+    _intentDataStreamSubscription = ReceiveSharingIntent.instance
+        .getMediaStream()
+        .listen(
+          (files) {
+            if (files.isNotEmpty &&
+                files.first.path.toLowerCase().endsWith('.pdf')) {
+              _handleSharedFile(files.first.path);
+            }
+          },
+          onError: (err) {
+            debugPrint("Sharing intent stream error: $err");
+          },
+        );
+
+    ReceiveSharingIntent.instance.getInitialMedia().then((files) {
+      if (files.isNotEmpty && files.first.path.toLowerCase().endsWith('.pdf')) {
+        _handleSharedFile(files.first.path);
+      }
+    });
+  }
+
+  void _handleSharedFile(String filePath) {
+    setState(() {
+      _incomingPdfPath = filePath;
+      _currentIndex = 1;
+    });
+  }
+
+  @override
+  void dispose() {
+    _intentDataStreamSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -171,8 +219,10 @@ class _MainAppPageState extends State<MainAppPage> {
       HomePage(db: widget.database),
       InsertPage(
         db: widget.database,
+        initialFilePath: _incomingPdfPath,
         onSave: () {
           setState(() {
+            _incomingPdfPath = null;
             _currentIndex = 0;
           });
         },

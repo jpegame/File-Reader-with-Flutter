@@ -76,11 +76,11 @@ class _HomePageState extends State<HomePage> {
 
               return GridView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 200,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  childAspectRatio: 1,
+                  childAspectRatio: 0.85,
                 ),
                 itemCount: results.length,
                 itemBuilder: (context, index) {
@@ -110,35 +110,45 @@ class _HomePageState extends State<HomePage> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                height: 120,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color:
-                                      Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? const Color.fromARGB(255, 84, 84, 84)
-                                      : const Color.fromARGB(255, 218, 218, 218),
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.picture_as_pdf,
-                                    size: 45,
-                                    color: Colors.redAccent,
+                              // Dynamically takes up remaining available space
+                              Expanded(
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? const Color.fromARGB(255, 84, 84, 84)
+                                        : const Color.fromARGB(
+                                            255,
+                                            218,
+                                            218,
+                                            218,
+                                          ),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.picture_as_pdf,
+                                      size: 38,
+                                      color: Colors.redAccent,
+                                    ),
                                   ),
                                 ),
                               ),
+
+                              // Text content section with fixed required height
                               Padding(
-                                padding: const EdgeInsets.all(10.0),
+                                padding: const EdgeInsets.all(8.0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       doc.name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 13,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -154,6 +164,8 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                       child: Text(
                                         cat.name.toUpperCase(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: 9,
                                           color: Colors.blue.shade900,
@@ -164,6 +176,8 @@ class _HomePageState extends State<HomePage> {
                                     const SizedBox(height: 4),
                                     Text(
                                       "Acessado em: ${DateFormat('dd/MM/yyyy HH:mm').format(doc.lastAccess.toLocal())}",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontSize: 10,
                                         color: Colors.grey,
@@ -175,8 +189,8 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                           Positioned(
-                            top: 8,
-                            right: 8,
+                            top: 6,
+                            right: 6,
                             child: GestureDetector(
                               onTap: () async {
                                 bool? confirmDelete = await showDialog<bool>(
@@ -228,7 +242,7 @@ class _HomePageState extends State<HomePage> {
                                 padding: const EdgeInsets.all(4),
                                 child: const Icon(
                                   Icons.close,
-                                  size: 18,
+                                  size: 16,
                                   color: Colors.white,
                                 ),
                               ),
@@ -259,7 +273,7 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            items: [],
+            items: const [],
             onChanged: null,
           );
         }

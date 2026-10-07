@@ -34,6 +34,10 @@ class DocumentDao extends DatabaseAccessor<AppDatabase>
     return query.watch();
   }
 
+  Future<DocumentData?> getDocumentById(int docId) {
+    return (select(document)..where((t) => t.id.equals(docId))).getSingleOrNull();
+  }
+
   Future<int> deleteDocument(int docId) {
     return (delete(document)..where((t) => t.id.equals(docId))).go();
   }

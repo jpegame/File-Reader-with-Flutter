@@ -7,6 +7,7 @@
 #include "generated_plugin_registrant.h"
 
 #include <file_selector_windows/file_selector_windows.h>
+#include <flutter_tts/flutter_tts_plugin.h>
 #include <pdfx/pdfx_plugin.h>
 #include <sqlite3_flutter_libs/sqlite3_flutter_libs_plugin.h>
 #include <syncfusion_pdfviewer_windows/syncfusion_pdfviewer_windows_plugin.h>
@@ -15,6 +16,8 @@
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   FileSelectorWindowsRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FileSelectorWindows"));
+  FlutterTtsPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FlutterTtsPlugin"));
   PdfxPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("PdfxPlugin"));
   Sqlite3FlutterLibsPluginRegisterWithRegistrar(
